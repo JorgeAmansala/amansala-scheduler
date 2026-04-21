@@ -209,14 +209,14 @@
 <div class="header">
   <h1>Amansala — Retreat Scheduler</h1>
   <div id="header-right">
-    <span id="mode-label" class="badge">Cargando...</span>
+    <span id="mode-label" class="badge">Loading...</span>
   </div>
 </div>
 
 <div class="tabs" id="tabs-staff" style="display:none;">
-  <button class="tab active" onclick="showTab('retiros')">Retiros</button>
-  <button class="tab" onclick="showTab('calendario')">Calendario</button>
-  <button class="tab" onclick="showTab('nuevo')">+ Nuevo retiro</button>
+  <button class="tab active" onclick="showTab('retiros')">Retreats</button>
+  <button class="tab" onclick="showTab('calendario')">Calendar</button>
+  <button class="tab" onclick="showTab('nuevo')">+ New retreat</button>
 </div>
 
 <!-- ═══════════════════════════════════════════
@@ -226,29 +226,29 @@
   <div id="alert-maestro" class="alert"></div>
 
   <div class="card" id="info-retiro-card">
-    <div class="loader" id="loading-retiro">Cargando información del retiro…</div>
+    <div class="loader" id="loading-retiro">Loading retreat information…</div>
     <div id="retiro-info" style="display:none;">
-      <div class="card-title">Tu retiro</div>
+      <div class="card-title">Your retreat</div>
       <div style="display:flex; gap:24px; flex-wrap:wrap;">
-        <div><div style="font-size:12px;color:var(--text-sec);font-family:sans-serif;">Grupo</div><div id="r-nombre" style="font-weight:bold;"></div></div>
-        <div><div style="font-size:12px;color:var(--text-sec);font-family:sans-serif;">Fechas</div><div id="r-fechas"></div></div>
-        <div><div style="font-size:12px;color:var(--text-sec);font-family:sans-serif;">Pax</div><div id="r-pax"></div></div>
-        <div><div style="font-size:12px;color:var(--text-sec);font-family:sans-serif;">Shalas disponibles</div><div id="r-shalas"></div></div>
-        <div><div style="font-size:12px;color:var(--text-sec);font-family:sans-serif;">Edición abierta hasta</div><div id="r-limite" style="color:var(--amber);font-family:sans-serif;font-size:13px;"></div></div>
+        <div><div style="font-size:12px;color:var(--text-sec);font-family:sans-serif;">Group</div><div id="r-nombre" style="font-weight:bold;"></div></div>
+        <div><div style="font-size:12px;color:var(--text-sec);font-family:sans-serif;">Dates</div><div id="r-fechas"></div></div>
+        <div><div style="font-size:12px;color:var(--text-sec);font-family:sans-serif;">Guests</div><div id="r-pax"></div></div>
+        <div><div style="font-size:12px;color:var(--text-sec);font-family:sans-serif;">Available shalas</div><div id="r-shalas"></div></div>
+        <div><div style="font-size:12px;color:var(--text-sec);font-family:sans-serif;">Edits open until</div><div id="r-limite" style="color:var(--amber);font-family:sans-serif;font-size:13px;"></div></div>
       </div>
     </div>
     <div id="retiro-cerrado" style="display:none;">
-      <div class="alert alert-error show">El período de edición de este retiro ha cerrado. Contacta a Amansala para hacer cambios.</div>
+      <div class="alert alert-error show">The editing period for this retreat has closed. Please contact Amansala to make changes.</div>
     </div>
   </div>
 
   <div id="schedule-form" style="display:none;">
     <div id="days-container"></div>
     <div class="submit-bar">
-      <span id="submit-hint">Al enviar se generará un Google Doc y se te enviará por email.</span>
+      <span id="submit-hint">Once submitted, a Google Doc will be generated and sent to your email.</span>
       <div class="btns">
-        <button class="btn-secondary" onclick="guardarBorrador()">Guardar borrador</button>
-        <button class="btn-primary" onclick="enviarSchedule()">Enviar schedule definitivo</button>
+        <button class="btn-secondary" onclick="guardarBorrador()">Save draft</button>
+        <button class="btn-primary" onclick="enviarSchedule()">Submit final schedule</button>
       </div>
     </div>
   </div>
@@ -261,10 +261,10 @@
   <div id="alert-retiros" class="alert"></div>
   <div class="card">
     <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-      Retiros activos
-      <button class="btn-secondary" style="font-size:12px;padding:5px 12px;" onclick="loadRetiros()">↺ Actualizar</button>
+      Active retreats
+      <button class="btn-secondary" style="font-size:12px;padding:5px 12px;" onclick="loadRetiros()">↺ Refresh</button>
     </div>
-    <div id="retiros-list"><div class="loader">Cargando retiros…</div></div>
+    <div id="retiros-list"><div class="loader">Loading retreats…</div></div>
   </div>
 </div>
 
@@ -277,11 +277,11 @@
       <div class="cal-legend" id="cal-legend"></div>
       <div style="display:flex;align-items:center;gap:10px;">
         <span class="auto-badge" id="refresh-countdown">↺ 60s</span>
-        <button class="btn-secondary" style="font-size:12px;padding:5px 12px;" onclick="loadCalendario()">Actualizar ahora</button>
+        <button class="btn-secondary" style="font-size:12px;padding:5px 12px;" onclick="loadCalendario()">Refresh now</button>
       </div>
     </div>
     <div id="conflict-box"></div>
-    <div class="cal-wrap" id="cal-wrap"><div class="loader">Cargando calendario…</div></div>
+    <div class="cal-wrap" id="cal-wrap"><div class="loader">Loading calendar…</div></div>
   </div>
 </div>
 
@@ -291,38 +291,38 @@
 <div class="main panel" id="panel-nuevo" style="display:none;">
   <div id="alert-nuevo" class="alert"></div>
   <div class="card">
-    <div class="card-title">Registrar nuevo retiro</div>
+    <div class="card-title">Register new retreat</div>
     <div class="form-grid">
       <div class="form-group">
-        <label>Nombre del grupo / maestro</label>
-        <input type="text" id="n-nombre" placeholder="ej. Sara Johnson Retreat" />
+        <label>Group / teacher name</label>
+        <input type="text" id="n-nombre" placeholder="e.g. Sara Johnson Retreat" />
       </div>
       <div class="form-group">
-        <label>Email del maestro</label>
-        <input type="email" id="n-email" placeholder="maestro@email.com" />
+        <label>Teacher email</label>
+        <input type="email" id="n-email" placeholder="teacher@email.com" />
       </div>
       <div class="form-group">
-        <label>Fecha de inicio</label>
-        <input type="date" id="n-inicio" />
+        <label>Start date</label>
+        <input type="date" id="n-inicio" onchange="autoFillEndDate(this.value)" />
       </div>
       <div class="form-group">
-        <label>Fecha de fin</label>
+        <label>End date</label>
         <input type="date" id="n-fin" />
       </div>
       <div class="form-group">
-        <label>Número de personas (pax)</label>
-        <input type="number" id="n-pax" min="1" max="45" placeholder="ej. 20" oninput="updatePaxHint(this.value)" />
-        <div class="pax-hint hint-sky"  id="hint-sky">Grupo pequeño (≤7 pax) — Shala: <strong>Sky</strong></div>
-        <div class="pax-hint hint-mid"  id="hint-mid">Grupo mediano (8–25 pax) — Shalas: <strong>Beachfront</strong> o <strong>Heaven</strong></div>
-        <div class="pax-hint hint-grande" id="hint-grande">Grupo grande (26–45 pax) — Shalas: <strong>Grande</strong> o <strong>Chica</strong> (maestro elige)</div>
+        <label>Number of guests (pax)</label>
+        <input type="number" id="n-pax" min="1" max="45" placeholder="e.g. 20" oninput="updatePaxHint(this.value)" />
+        <div class="pax-hint hint-sky"  id="hint-sky">Small group (≤7 pax) — Shala: <strong>Sky</strong></div>
+        <div class="pax-hint hint-mid"  id="hint-mid">Medium group (8–25 pax) — Shalas: <strong>Beachfront</strong> or <strong>Heaven</strong></div>
+        <div class="pax-hint hint-grande" id="hint-grande">Large group (26–45 pax) — Shalas: <strong>Grande</strong> or <strong>Chica</strong> (teacher chooses)</div>
       </div>
     </div>
     <div style="margin-top:8px;">
-      <button class="btn-primary" onclick="crearRetiro()">Crear retiro y enviar link al maestro</button>
+      <button class="btn-primary" onclick="crearRetiro()">Create retreat & send link to teacher</button>
     </div>
     <div id="link-generado" style="display:none; margin-top:16px; padding:14px; background:var(--teal-lt); border-radius:var(--radius-sm); font-family:sans-serif; font-size:13px;">
-      <div style="color:var(--teal-dk);font-weight:bold;margin-bottom:6px;">✓ Retiro creado. Link enviado al maestro.</div>
-      <div style="color:var(--text-sec);">Link del formulario:</div>
+      <div style="color:var(--teal-dk);font-weight:bold;margin-bottom:6px;">✓ Retreat created. Link sent to teacher.</div>
+      <div style="color:var(--text-sec);">Form link:</div>
       <div id="link-url" style="color:var(--teal);word-break:break-all;margin-top:4px;"></div>
     </div>
   </div>
@@ -349,13 +349,13 @@ var isStaff  = !retiroId;
 if (isStaff) {
   document.getElementById('tabs-staff').style.display = 'flex';
   document.getElementById('panel-retiros').style.display = 'block';
-  document.getElementById('mode-label').textContent = 'Vista staff';
+  document.getElementById('mode-label').textContent = 'Staff view';
   loadRetiros();
   loadCalendario();
   startAutoRefresh();
 } else {
   document.getElementById('panel-maestro').style.display = 'block';
-  document.getElementById('mode-label').textContent = 'Formulario maestro';
+  document.getElementById('mode-label').textContent = 'Teacher form';
   initMaestro(retiroId);
 }
 
@@ -374,7 +374,7 @@ function initMaestro(id) {
   api('getRetiro', { retiroId: id }).then(function(res) {
     document.getElementById('loading-retiro').style.display = 'none';
     if (!res.ok || !res.retiro) {
-      showAlert('alert-maestro', 'error', 'No se encontró el retiro. Verifica el link.');
+      showAlert('alert-maestro', 'error', 'Retreat not found. Please check your link.');
       return;
     }
     var r = res.retiro;
@@ -405,15 +405,15 @@ function initMaestro(id) {
     api('getActividades', { retiroId: id }).then(function(ar) {
       if (ar.ok && ar.actividades.length > 0) {
         renderDays(dias, ar.actividades);
-        showAlert('alert-maestro', 'warn', 'Ya tienes un schedule guardado. Puedes editarlo hasta ' + r['Fecha Limite Edicion'] + '.');
+        showAlert('alert-maestro', 'warn', 'You already have a saved schedule. You can edit it until ' + r['Fecha Limite Edicion'] + '.');
       }
     });
   });
 }
 
 // ── DAYS RENDERER ─────────────────────────────────────────
-var DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-var MONTH_NAMES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+var DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+var MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 function getDiasBetween(ini, fin) {
   var dias = [], cur = new Date(ini), end = new Date(fin);
@@ -429,7 +429,7 @@ function renderDays(dias, actividades) {
   cont.innerHTML = '';
   dias.forEach(function(dia) {
     var d = new Date(dia);
-    var label = DAY_NAMES[d.getDay()] + ', ' + d.getDate() + ' de ' + MONTH_NAMES[d.getMonth()];
+    var label = DAY_NAMES[d.getDay()] + ', ' + MONTH_NAMES[d.getMonth()] + ' ' + d.getDate();
     var acts = actividades.filter(function(a){ return a['Dia'] === dia || a.dia === dia; });
 
     var block = document.createElement('div');
@@ -437,9 +437,9 @@ function renderDays(dias, actividades) {
     block.dataset.dia = dia;
     block.innerHTML =
       '<div class="day-header"><span class="day-name">' + label + '</span>' +
-      '<button class="btn-add" onclick="addActRow(\'' + dia + '\')">+ Agregar actividad</button></div>' +
-      '<div class="act-cols"><span>Inicio</span><span>Fin</span><span>Actividad</span>' +
-      '<span class="col-shala">Shala</span><span class="col-opc">Opcional</span><span class="col-precio">Precio $</span><span></span></div>' +
+      '<button class="btn-add" onclick="addActRow(\'' + dia + '\')">+ Add activity</button></div>' +
+      '<div class="act-cols"><span>Start</span><span>End</span><span>Activity</span>' +
+      '<span class="col-shala">Shala</span><span class="col-opc">Optional</span><span class="col-precio">Price $</span><span></span></div>' +
       '<div class="acts" id="acts-' + dia + '"></div>';
     cont.appendChild(block);
 
@@ -454,7 +454,7 @@ function renderDays(dias, actividades) {
 function addActRow(dia, data) {
   var cont = document.getElementById('acts-' + dia);
   var shalas = (window._shalas || ['Sky','Beachfront','Heaven','Grande','Chica']);
-  var opts = '<option value="">— sin shala —</option>' +
+  var opts = '<option value="">— no shala —</option>' +
     shalas.map(function(s){ return '<option value="'+s+'"'+(data&&data.shala===s?' selected':'')+'>'+s+'</option>'; }).join('');
 
   var row = document.createElement('div');
@@ -462,9 +462,9 @@ function addActRow(dia, data) {
   row.innerHTML =
     '<input type="time" class="f-inicio" value="'+(data&&(data['Hora Inicio']||data.horaInicio)||'')+'" />' +
     '<input type="time" class="f-fin"    value="'+(data&&(data['Hora Fin']||data.horaFin)||'')+'" />' +
-    '<input type="text" class="f-act"    value="'+(data&&(data['Actividad']||data.actividad)||'')+'" placeholder="Nombre de la actividad" />' +
+    '<input type="text" class="f-act"    value="'+(data&&(data['Actividad']||data.actividad)||'')+'" placeholder="Activity name" />' +
     '<select class="f-shala col-shala">'+opts+'</select>' +
-    '<div class="act-check col-opc"><input type="checkbox" class="f-opcional"'+(data&&(data['Opcional']==='Sí'||data.opcional)?' checked':'')+' /> Opcional</div>' +
+    '<div class="act-check col-opc"><input type="checkbox" class="f-opcional"'+(data&&(data['Opcional']==='Sí'||data.opcional)?' checked':'')+' /> Optional</div>' +
     '<input type="number" class="f-precio col-precio" placeholder="0" value="'+(data&&(data['Precio']||data.precio)||'')+'" style="width:80px;" />' +
     '<button class="btn-del" onclick="this.parentElement.remove()">×</button>';
   cont.appendChild(row);
@@ -495,12 +495,12 @@ function collectActividades() {
 function guardarBorrador() {
   var acts = collectActividades();
   localStorage.setItem('borrador_' + retiroId, JSON.stringify(acts));
-  showAlert('alert-maestro', 'success', 'Borrador guardado localmente. Recuerda enviar el definitivo cuando esté listo.');
+  showAlert('alert-maestro', 'success', 'Draft saved locally. Remember to submit the final schedule when ready.');
 }
 
 function enviarSchedule() {
   var acts = collectActividades();
-  if (acts.length === 0) { showAlert('alert-maestro', 'error', 'Agrega al menos una actividad antes de enviar.'); return; }
+  if (acts.length === 0) { showAlert('alert-maestro', 'error', 'Add at least one activity before submitting.'); return; }
   var r = window._retiro;
   api_post('guardarSchedule', {
     retiroId:     retiroId,
@@ -508,13 +508,13 @@ function enviarSchedule() {
     emailMaestro: r['Email Maestro'],
     nombreGrupo:  r['Nombre Grupo'],
   }).then(function(res) {
-    if (!res.ok) { showAlert('alert-maestro', 'error', res.error || 'Error al guardar.'); return; }
-    var msg = '✓ Schedule enviado correctamente. Recibirás el Google Doc en tu email.';
+    if (!res.ok) { showAlert('alert-maestro', 'error', res.error || 'Error saving schedule.'); return; }
+    var msg = '✓ Schedule submitted successfully. You will receive the Google Doc in your email.';
     if (res.conflictos && res.conflictos.length > 0) {
-      msg += ' Nota: hay ' + res.conflictos.length + ' conflicto(s) de shala detectado(s). El staff de Amansala te contactará.';
+      msg += ' Note: ' + res.conflictos.length + ' shala conflict(s) detected. Amansala staff will contact you.';
     }
     showAlert('alert-maestro', 'success', msg);
-    document.querySelector('.submit-bar .btns').innerHTML = '<span style="color:var(--teal);font-size:13px;font-family:sans-serif;">✓ Enviado</span>';
+    document.querySelector('.submit-bar .btns').innerHTML = '<span style="color:var(--teal);font-size:13px;font-family:sans-serif;">✓ Submitted</span>';
   });
 }
 
@@ -523,7 +523,7 @@ function loadRetiros() {
   api('getRetiros', {}).then(function(res) {
     var el = document.getElementById('retiros-list');
     if (!res.ok || res.retiros.length === 0) {
-      el.innerHTML = '<div style="color:var(--text-sec);font-family:sans-serif;font-size:13px;padding:16px 0;">No hay retiros registrados aún.</div>';
+      el.innerHTML = '<div style="color:var(--text-sec);font-family:sans-serif;font-size:13px;padding:16px 0;">No retreats registered yet.</div>';
       return;
     }
     el.innerHTML = res.retiros.map(function(r) {
@@ -563,7 +563,7 @@ function startAutoRefresh() {
 function loadCalendario() {
   document.getElementById('refresh-countdown') && (document.getElementById('refresh-countdown').textContent = '↺ 60s');
   api('getConflictos', {}).then(function(res) {
-    if (!res.ok) { document.getElementById('cal-wrap').innerHTML = '<div class="loader">Error cargando datos.</div>'; return; }
+    if (!res.ok) { document.getElementById('cal-wrap').innerHTML = '<div class="loader">Error loading data.</div>'; return; }
     renderCalendario(res.ocupadas || [], res.conflictos || []);
   });
 }
@@ -641,6 +641,17 @@ function renderCalendario(ocupadas, conflictos) {
 }
 
 // ── STAFF: NUEVO RETIRO ───────────────────────────────────
+function autoFillEndDate(startVal) {
+  if (!startVal) return;
+  var d = new Date(startVal);
+  d.setDate(d.getDate() + 4); // default: 5-day retreat
+  var y = d.getFullYear();
+  var m = String(d.getMonth()+1).padStart(2,'0');
+  var day = String(d.getDate()).padStart(2,'0');
+  document.getElementById('n-fin').value = y+'-'+m+'-'+day;
+  document.getElementById('n-fin').min = startVal;
+}
+
 function crearRetiro() {
   var nombre = document.getElementById('n-nombre').value.trim();
   var email  = document.getElementById('n-email').value.trim();
@@ -649,14 +660,14 @@ function crearRetiro() {
   var pax    = document.getElementById('n-pax').value;
 
   if (!nombre || !email || !inicio || !fin || !pax) {
-    showAlert('alert-nuevo', 'error', 'Completa todos los campos antes de continuar.');
+    showAlert('alert-nuevo', 'error', 'Please fill in all fields before continuing.');
     return;
   }
   api_post('crearRetiro', { nombre, emailMaestro: email, fechaInicio: inicio, fechaFin: fin, pax }).then(function(res) {
-    if (!res.ok) { showAlert('alert-nuevo', 'error', res.error || 'Error al crear retiro.'); return; }
+    if (!res.ok) { showAlert('alert-nuevo', 'error', res.error || 'Error creating retreat.'); return; }
     document.getElementById('link-generado').style.display = 'block';
     document.getElementById('link-url').textContent = res.link;
-    showAlert('alert-nuevo', 'success', 'Retiro creado. El link fue enviado automáticamente al maestro por email.');
+    showAlert('alert-nuevo', 'success', 'Retreat created. The link was automatically sent to the teacher by email.');
     loadRetiros();
   });
 }
