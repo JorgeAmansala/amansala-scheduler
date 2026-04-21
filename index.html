@@ -370,6 +370,42 @@ function showTab(name) {
 }
 
 // ── MAESTRO: init ─────────────────────────────────────────
+
+// Default activities pre-filled for each day (based on Amansala standard schedule)
+var DEFAULT_ACTIVITIES = [
+  { horaInicio:'07:00', horaFin:'08:00', actividad:'Morning Yoga', shala:'', opcional:false, precio:'' },
+  { horaInicio:'08:00', horaFin:'09:00', actividad:'Breakfast', shala:'', opcional:false, precio:'' },
+  { horaInicio:'13:00', horaFin:'14:00', actividad:'Lunch', shala:'', opcional:false, precio:'' },
+  { horaInicio:'16:30', horaFin:'17:30', actividad:'Afternoon Class', shala:'', opcional:false, precio:'' },
+  { horaInicio:'19:30', horaFin:'21:00', actividad:'Dinner', shala:'', opcional:false, precio:'' },
+];
+
+var FIRST_DAY_ACTIVITIES = [
+  { horaInicio:'16:00', horaFin:'17:00', actividad:'Welcome Snack', shala:'', opcional:false, precio:'' },
+  { horaInicio:'17:45', horaFin:'19:00', actividad:'Opening Yoga | Orientation w Amansala', shala:'Beachfront', opcional:false, precio:'' },
+  { horaInicio:'19:30', horaFin:'21:00', actividad:'Dinner', shala:'', opcional:false, precio:'' },
+];
+
+var LAST_DAY_ACTIVITIES = [
+  { horaInicio:'07:00', horaFin:'07:30', actividad:'Light Breakfast', shala:'', opcional:false, precio:'' },
+  { horaInicio:'08:00', horaFin:'09:00', actividad:'Morning Class', shala:'Beachfront', opcional:false, precio:'' },
+  { horaInicio:'09:15', horaFin:'10:00', actividad:'Full Breakfast', shala:'', opcional:false, precio:'' },
+  { horaInicio:'', horaFin:'', actividad:'Departures', shala:'', opcional:false, precio:'' },
+];
+
+function fmtDate(str) {
+  if (!str) return '';
+  var d = new Date(str);
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return months[d.getUTCMonth()] + ' ' + d.getUTCDate() + ', ' + d.getUTCFullYear();
+}
+
+function fmtDateShort(str) {
+  if (!str) return '';
+  var d = new Date(str);
+  return (d.getUTCMonth()+1) + '/' + d.getUTCDate() + '/' + d.getUTCFullYear();
+}
+
 function initMaestro(id) {
   api('getRetiro', { retiroId: id }).then(function(res) {
     document.getElementById('loading-retiro').style.display = 'none';
@@ -388,24 +424,29 @@ function initMaestro(id) {
 
     document.getElementById('retiro-info').style.display = 'block';
     document.getElementById('r-nombre').textContent = r['Nombre Grupo'];
-    document.getElementById('r-fechas').textContent = r['Fecha Inicio'] + ' → ' + r['Fecha Fin'];
-    document.getElementById('r-pax').textContent = r['Pax'] + ' personas';
+    document.getElementById('r-fechas').textContent = fmtDate(r['Fecha Inicio']) + ' → ' + fmtDate(r['Fecha Fin']);
+    document.getElementById('r-pax').textContent = r['Pax'] + ' guests';
     document.getElementById('r-shalas').textContent = r['Shalas Permitidas'];
-    document.getElementById('r-limite').textContent = r['Fecha Limite Edicion'];
+    document.getElementById('r-limite').textContent = fmtDateShort(r['Fecha Limite Edicion']);
 
-    // Generar días entre inicio y fin
     var dias = getDiasBetween(r['Fecha Inicio'], r['Fecha Fin']);
     window._retiro = r;
     window._shalas = r['Shalas Permitidas'].split(', ');
 
-    renderDays(dias, []);
+    // Pre-fill with default activities
+    var defaultFill = dias.map(function(dia, idx) {
+      var acts = idx === 0 ? FIRST_DAY_ACTIVITIES : idx === dias.length - 1 ? LAST_DAY_ACTIVITIES : DEFAULT_ACTIVITIES;
+      return acts.map(function(a) { return Object.assign({}, a, { dia: dia }); });
+    }).flat();
+
+    renderDays(dias, defaultFill);
     document.getElementById('schedule-form').style.display = 'block';
 
-    // Cargar actividades existentes si las hay
+    // If existing saved activities, override the defaults
     api('getActividades', { retiroId: id }).then(function(ar) {
       if (ar.ok && ar.actividades.length > 0) {
         renderDays(dias, ar.actividades);
-        showAlert('alert-maestro', 'warn', 'You already have a saved schedule. You can edit it until ' + r['Fecha Limite Edicion'] + '.');
+        showAlert('alert-maestro', 'warn', 'You already have a saved schedule. You can edit it until ' + fmtDateShort(r['Fecha Limite Edicion']) + '.');
       }
     });
   });
