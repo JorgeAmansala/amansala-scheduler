@@ -144,8 +144,19 @@
   .addon-price { font-size: 13px; font-weight: bold; color: var(--amber); }
   .addon-row select { font-size: 13px; padding: 6px 8px; background: white; border: 1px solid var(--border); border-radius: var(--radius-sm); }
 
-  /* ── CONFLICT TAG ── */
-  .conflict-tag { font-size: 11px; background: var(--red-lt); color: var(--red); border-radius: var(--radius-sm); padding: 2px 7px; font-family: sans-serif; }
+  /* ── OFFSITE DINNER ── */
+  .offsite-row {
+    display: grid;
+    grid-template-columns: 88px 88px 1fr 32px;
+    gap: 6px; align-items: center; margin-bottom: 6px;
+    background: var(--pink-lt); border: 1px solid #F4C0D1;
+    border-radius: var(--radius-sm); padding: 8px 10px;
+    font-family: sans-serif;
+  }
+  .offsite-label { font-size: 12px; color: var(--pink-dk); font-weight: bold; display: flex; align-items: center; gap: 6px; }
+  .offsite-label span { font-size: 11px; font-weight: normal; opacity: 0.7; }
+  .btn-offsite-remove { background: none; border: none; color: #F4C0D1; font-size: 16px; cursor: pointer; }
+  .btn-offsite-remove:hover { color: var(--pink-dk); }
 
   /* ── BUTTONS ── */
   .btn-primary {
@@ -523,9 +534,21 @@ function initMaestro(id) {
       if (ar.ok && ar.actividades.length > 0) {
         var addonIds = ADDONS.map(function(a){ return a.name; });
         var savedAddons = ar.actividades.filter(function(a){ return addonIds.indexOf(a['Actividad']) !== -1; });
-        var savedRegular = ar.actividades.filter(function(a){ return addonIds.indexOf(a['Actividad']) === -1; });
+        var savedOffsite = ar.actividades.find(function(a){ return (a['Actividad']||a.actividad) === 'Offsite Dinner'; });
+        var savedRegular = ar.actividades.filter(function(a){
+          return addonIds.indexOf(a['Actividad']) === -1 && (a['Actividad']||a.actividad) !== 'Offsite Dinner';
+        });
         renderAddons(dias, savedAddons);
         renderDays(dias, savedRegular);
+        if (savedOffsite) {
+          var offDia = savedOffsite['Dia'] || savedOffsite.dia;
+          addOffsiteDinner(offDia);
+          var cont = document.getElementById('offsite-' + offDia);
+          if (cont && cont.querySelector('.offsite-inicio')) {
+            cont.querySelector('.offsite-inicio').value = savedOffsite['Hora Inicio'] || savedOffsite.horaInicio || '19:30';
+            cont.querySelector('.offsite-fin').value = savedOffsite['Hora Fin'] || savedOffsite.horaFin || '22:00';
+          }
+        }
         showAlert('alert-maestro', 'warn', 'You already have a saved schedule. You can edit it until ' + fmtDateShort(r['Fecha Limite Edicion']) + '.');
       }
     });
@@ -558,10 +581,14 @@ function renderDays(dias, actividades) {
     block.dataset.dia = dia;
     block.innerHTML =
       '<div class="day-header"><span class="day-name">' + label + '</span>' +
-      '<button class="btn-add" onclick="addActRow(\'' + dia + '\')">+ Add activity</button></div>' +
+      '<div style="display:flex;gap:6px;">' +
+      '<button class="btn-add btn-offsite" onclick="addOffsiteDinner(\'' + dia + '\')" id="btn-offsite-' + dia + '">+ Offsite Dinner</button>' +
+      '<button class="btn-add" onclick="addActRow(\'' + dia + '\')">+ Add activity</button>' +
+      '</div></div>' +
       '<div class="act-cols"><span>Start</span><span>End</span><span>Activity</span>' +
       '<span>Shala</span><span></span></div>' +
-      '<div class="acts" id="acts-' + dia + '"></div>';
+      '<div class="acts" id="acts-' + dia + '"></div>' +
+      '<div class="offsite-container" id="offsite-' + dia + '"></div>';
     cont.appendChild(block);
 
     if (acts.length > 0) {
@@ -570,6 +597,59 @@ function renderDays(dias, actividades) {
       addActRow(dia);
     }
   });
+}
+
+// ── OFFSITE DINNER ────────────────────────────────────────
+window._offsiteDia = null; // tracks which day has the offsite dinner
+
+function addOffsiteDinner(dia) {
+  // Remove from previous day if set
+  if (window._offsiteDia && window._offsiteDia !== dia) {
+    var prev = document.getElementById('offsite-' + window._offsiteDia);
+    if (prev) prev.innerHTML = '';
+    var prevBtn = document.getElementById('btn-offsite-' + window._offsiteDia);
+    if (prevBtn) { prevBtn.textContent = '+ Offsite Dinner'; prevBtn.style.background = ''; prevBtn.style.color = ''; }
+  }
+  window._offsiteDia = dia;
+
+  var cont = document.getElementById('offsite-' + dia);
+  var btn = document.getElementById('btn-offsite-' + dia);
+  btn.textContent = '✓ Offsite Dinner set';
+  btn.style.background = '#FBEAF0';
+  btn.style.color = 'var(--pink-dk)';
+
+  cont.innerHTML = '';
+  var row = document.createElement('div');
+  row.className = 'offsite-row';
+  row.innerHTML =
+    '<input type="time" class="offsite-inicio" value="19:30" />' +
+    '<input type="time" class="offsite-fin"    value="22:00" />' +
+    '<div class="offsite-label">Offsite Dinner <span>— no shala, not included in program</span></div>' +
+    '<button class="btn-offsite-remove" onclick="removeOffsiteDinner(\'' + dia + '\')">×</button>';
+  cont.appendChild(row);
+}
+
+function removeOffsiteDinner(dia) {
+  var cont = document.getElementById('offsite-' + dia);
+  if (cont) cont.innerHTML = '';
+  var btn = document.getElementById('btn-offsite-' + dia);
+  if (btn) { btn.textContent = '+ Offsite Dinner'; btn.style.background = ''; btn.style.color = ''; }
+  window._offsiteDia = null;
+}
+
+function getOffsiteDinner() {
+  if (!window._offsiteDia) return null;
+  var cont = document.getElementById('offsite-' + window._offsiteDia);
+  if (!cont || !cont.querySelector('.offsite-inicio')) return null;
+  return {
+    dia:        window._offsiteDia,
+    horaInicio: cont.querySelector('.offsite-inicio').value,
+    horaFin:    cont.querySelector('.offsite-fin').value,
+    actividad:  'Offsite Dinner',
+    shala:      '',
+    opcional:   false,
+    precio:     '',
+  };
 }
 
 var SHALA_RULES = {
@@ -648,7 +728,6 @@ function addActRow(dia, data) {
 // ── RECOGER DATOS DEL FORM ────────────────────────────────
 function collectActividades() {
   var actividades = [];
-  // Regular activities
   document.querySelectorAll('.day-block').forEach(function(block) {
     var dia = block.dataset.dia;
     block.querySelectorAll('.act-row').forEach(function(row) {
@@ -665,6 +744,9 @@ function collectActividades() {
       });
     });
   });
+  // Offsite dinner
+  var offsite = getOffsiteDinner();
+  if (offsite) actividades.push(offsite);
   // Add-ons
   actividades = actividades.concat(collectAddons());
   return actividades;
