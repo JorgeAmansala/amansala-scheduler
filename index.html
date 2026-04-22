@@ -707,6 +707,8 @@ function renderDaysWithMeals(dias, savedActivities) {
   var flat = allActs.reduce(function(acc,v){ return acc.concat(v); }, []);
   renderDays(dias, flat);
 }
+
+function renderDays(dias, actividades) {
   var cont = document.getElementById('days-container');
   cont.innerHTML = '';
   dias.forEach(function(dia) {
