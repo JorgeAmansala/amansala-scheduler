@@ -349,7 +349,7 @@
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding-bottom:16px;border-bottom:0.5px solid var(--border);">
       <div style="display:flex;align-items:center;gap:8px;font-family:sans-serif;font-size:13px;">
         <label style="color:var(--text-sec);font-size:12px;">From</label>
-        <input type="date" id="cal-from" style="font-size:13px;padding:6px 10px;" onchange="filterCalendario()" oninput="filterCalendario()" />
+        <input type="date" id="cal-from" style="font-size:13px;padding:6px 10px;" onchange="onCalFromChange(this.value)" oninput="onCalFromChange(this.value)" />
       </div>
       <div style="display:flex;align-items:center;gap:8px;font-family:sans-serif;font-size:13px;">
         <label style="color:var(--text-sec);font-size:12px;">To</label>
@@ -1416,6 +1416,18 @@ function filterCalendario() {
     });
   }
   renderCalendario(filtOcupadas, filtConflictos);
+}
+
+function onCalFromChange(val) {
+  if (val) {
+    var toEl = document.getElementById('cal-to');
+    if (!toEl.value || toEl.value < val) {
+      toEl.value = val;
+      window._calTo = val;
+    }
+    toEl.min = val;
+  }
+  filterCalendario();
 }
 
 function clearCalFilter() {
