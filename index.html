@@ -406,7 +406,7 @@
 
     <!-- AM / PM Class shalas -->
     <div style="border-top:0.5px solid var(--border);padding-top:16px;margin-top:8px;margin-bottom:16px;">
-      <div class="card-title" style="margin-bottom:12px;">Class shalas <span style="font-weight:normal;text-transform:none;font-size:11px;color:var(--text-sec);letter-spacing:0;">(optional — locked for teacher)</span></div>
+      <div class="card-title" style="margin-bottom:12px;">Choose the Shala <span style="font-weight:normal;text-transform:none;font-size:11px;color:var(--text-sec);letter-spacing:0;">(optional — locked for teacher)</span></div>
       <div class="form-grid">
         <div class="form-group">
           <label>AM Class</label>
@@ -1183,7 +1183,7 @@ function enviarSchedule() {
   var r = window._retiro;
   api_post('guardarSchedule', {
     retiroId:     retiroId,
-    actividades:  acts,
+    actividades:  JSON.stringify(acts),
     emailMaestro: r['Email Maestro'],
     nombreGrupo:  r['Nombre Grupo'],
   }).then(function(res) {
@@ -1564,11 +1564,12 @@ function api(action, params) {
 }
 
 function api_post(action, data) {
-  data.action = action;
-  return fetch(GAS_URL, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }).then(function(r){ return r.json(); }).catch(function(){ return { ok:false, error:'Error de conexión' }; });
+  // Use GET with encoded params to avoid CORS preflight issues with Apps Script
+  var url = GAS_URL + '?action=' + action;
+  Object.keys(data).forEach(function(k) {
+    if (k !== 'action') url += '&' + k + '=' + encodeURIComponent(typeof data[k] === 'object' ? JSON.stringify(data[k]) : data[k]);
+  });
+  return fetch(url).then(function(r){ return r.json(); }).catch(function(){ return { ok:false, error:'Error de conexión' }; });
 }
 
 // ── ALERTS ───────────────────────────────────────────────
