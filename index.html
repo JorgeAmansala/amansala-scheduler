@@ -114,14 +114,14 @@
 
   .act-cols {
     display: grid;
-    grid-template-columns: 88px 88px 1fr 130px 32px;
+    grid-template-columns: 88px 88px 1fr 130px 110px 32px;
     gap: 6px; align-items: center;
     font-size: 11px; color: var(--text-sec); font-family: sans-serif;
     margin-bottom: 4px; padding: 0 2px;
   }
   .act-row {
     display: grid;
-    grid-template-columns: 88px 88px 1fr 130px 32px;
+    grid-template-columns: 88px 88px 1fr 130px 110px 32px;
     gap: 6px; align-items: center; margin-bottom: 6px;
     flex-wrap: wrap;
   }
@@ -726,7 +726,7 @@ function renderDays(dias, actividades) {
       '<button class="btn-add" onclick="addActRow(\'' + dia + '\')">+ Add activity</button>' +
       '</div></div>' +
       '<div class="act-cols"><span>Start</span><span>End</span><span>Activity</span>' +
-      '<span>Shala</span><span></span></div>' +
+      '<span>Shala</span><span>Music</span><span></span></div>' +
       '<div class="acts" id="acts-' + dia + '"></div>' +
       '<div class="offsite-container" id="offsite-' + dia + '"></div>';
     cont.appendChild(block);
@@ -881,6 +881,30 @@ function checkShalaWarning(selectEl) {
   }
 }
 
+function checkMusicLoud(selectEl) {
+  var row = selectEl.closest('.act-row');
+  if (selectEl.value === 'Loud') {
+    row.style.background = '#FCEBEB';
+    row.style.borderRadius = 'var(--radius-sm)';
+    row.style.padding = '4px 6px';
+  } else {
+    row.style.background = '';
+    row.style.padding = '';
+  }
+}
+
+function sortDayRows(dia) {
+  var cont = document.getElementById('acts-' + dia);
+  if (!cont) return;
+  var rows = Array.from(cont.querySelectorAll('.act-row'));
+  rows.sort(function(a, b) {
+    var tA = a.querySelector('.f-inicio') ? a.querySelector('.f-inicio').value : '';
+    var tB = b.querySelector('.f-inicio') ? b.querySelector('.f-inicio').value : '';
+    return timeVal(tA) - timeVal(tB);
+  });
+  rows.forEach(function(r) { cont.appendChild(r); });
+}
+
 function addActRow(dia, data) {
   var cont = document.getElementById('acts-' + dia);
   var pax = parseInt((window._retiro && window._retiro['Pax']) || 0);
@@ -906,20 +930,27 @@ function addActRow(dia, data) {
   row.className = 'act-row';
   row.style.flexWrap = 'wrap';
 
-  // Locked meal row: name is plain text, no shala, no delete button
+  // Locked meal row: no shala, no music, no delete
   if (locked) {
     row.innerHTML =
-      '<input type="time" class="f-inicio" value="'+(data&&(data['Hora Inicio']||data.horaInicio)||'')+'" />' +
+      '<input type="time" class="f-inicio" value="'+(data&&(data['Hora Inicio']||data.horaInicio)||'')+'" onchange="sortDayRows(\''+dia+'\')" />' +
       '<input type="time" class="f-fin"    value="'+(data&&(data['Hora Fin']||data.horaFin)||'')+'" />' +
       '<input type="text" class="f-act" value="'+actName+'" readonly style="background:var(--gray-lt);color:var(--text-sec);cursor:default;border-color:var(--border);" />' +
       '<div style="visibility:hidden;width:130px;"></div>' +
+      '<div style="width:110px;"></div>' +
       '<div style="width:32px;"></div>';
   } else {
+    var musicVal = data ? (data.music || data['Music'] || '') : '';
     row.innerHTML =
-      '<input type="time" class="f-inicio" value="'+(data&&(data['Hora Inicio']||data.horaInicio)||'')+'" />' +
+      '<input type="time" class="f-inicio" value="'+(data&&(data['Hora Inicio']||data.horaInicio)||'')+'" onchange="sortDayRows(\''+dia+'\')" />' +
       '<input type="time" class="f-fin"    value="'+(data&&(data['Hora Fin']||data.horaFin)||'')+'" />' +
       '<input type="text" class="f-act"    value="'+actName+'" placeholder="Activity name" />' +
       '<select class="f-shala" onchange="checkShalaWarning(this)" style="'+(showShala?'':'visibility:hidden;')+'">'+opts+'</select>' +
+      '<select class="f-music" onchange="checkMusicLoud(this)">' +
+        '<option value="">Music in shala</option>' +
+        '<option value="Regular"'+(musicVal==='Regular'?' selected':'')+'>Regular</option>' +
+        '<option value="Loud"'+(musicVal==='Loud'?' selected':'')+'>Loud</option>' +
+      '</select>' +
       '<button class="btn-del" onclick="this.closest(\'.act-row\').remove()">×</button>';
 
     // Live: toggle shala visibility as user types
@@ -948,24 +979,27 @@ function collectActividades() {
   document.querySelectorAll('.day-block').forEach(function(block) {
     var dia = block.dataset.dia;
     block.querySelectorAll('.act-row').forEach(function(row) {
-      if (row.dataset.removedDinner === 'true') return; // skip hidden dinner
-      var act = row.querySelector('.f-act').value.trim();
+      if (row.dataset.removedDinner === 'true') return;
+      var actEl = row.querySelector('.f-act');
+      if (!actEl) return;
+      var act = actEl.value.trim();
       if (!act) return;
+      var musicEl = row.querySelector('.f-music');
+      var shalaEl = row.querySelector('.f-shala');
       actividades.push({
         dia:        dia,
         horaInicio: row.querySelector('.f-inicio').value,
         horaFin:    row.querySelector('.f-fin').value,
         actividad:  act,
-        shala:      row.querySelector('.f-shala').value,
+        shala:      shalaEl ? shalaEl.value : '',
         opcional:   false,
         precio:     '',
+        music:      musicEl ? musicEl.value : '',
       });
     });
   });
-  // Offsite dinner
   var offsite = getOffsiteDinner();
   if (offsite) actividades.push(offsite);
-  // Add-ons
   actividades = actividades.concat(collectAddons());
   return actividades;
 }
