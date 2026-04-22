@@ -269,6 +269,28 @@
   </div>
 
   <div id="schedule-form" style="display:none;">
+
+    <!-- MEAL PLAN SELECTOR -->
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-title">Meal plan</div>
+      <div style="font-size:13px;color:var(--text-sec);font-family:sans-serif;margin-bottom:14px;">Choose the meal structure for your retreat. This applies to all days except the first and last.</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div id="meal-opt1" onclick="selectMealPlan(1)"
+          style="flex:1;min-width:200px;border:2px solid var(--teal);border-radius:var(--radius);padding:16px 20px;cursor:pointer;background:var(--teal-lt);">
+          <div style="font-weight:bold;font-size:14px;color:var(--teal-dk);font-family:sans-serif;margin-bottom:8px;">Option 1</div>
+          <div style="font-size:13px;color:var(--teal-dk);font-family:sans-serif;line-height:1.8;">
+            Light Breakfast<br>Brunch<br>Snack<br>Dinner
+          </div>
+        </div>
+        <div id="meal-opt2" onclick="selectMealPlan(2)"
+          style="flex:1;min-width:200px;border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;cursor:pointer;background:white;">
+          <div style="font-weight:bold;font-size:14px;color:var(--text-sec);font-family:sans-serif;margin-bottom:8px;">Option 2</div>
+          <div style="font-size:13px;color:var(--text-sec);font-family:sans-serif;line-height:1.8;">
+            Breakfast<br>Lunch<br>Dinner
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="card addons-section">
       <div class="card-title">Optional Add-ons — select a day for each activity you want to include</div>
       <div style="display:grid; grid-template-columns: 1fr 80px 70px 160px; gap:10px; font-size:11px; color:var(--text-sec); font-family:sans-serif; padding:0 14px; margin-bottom:6px;">
@@ -404,26 +426,73 @@ function showTab(name) {
 
 // ── MAESTRO: init ─────────────────────────────────────────
 
+// ── MEAL PLANS ────────────────────────────────────────────
+var MEAL_PLAN = 1; // default option 1
+
+var MEALS_OPT1 = [
+  { horaInicio:'07:00', horaFin:'07:30', actividad:'Light Breakfast' },
+  { horaInicio:'10:45', horaFin:'12:00', actividad:'Brunch' },
+  { horaInicio:'14:30', horaFin:'15:00', actividad:'Snack' },
+  { horaInicio:'19:30', horaFin:'21:00', actividad:'Dinner' },
+];
+var MEALS_OPT2 = [
+  { horaInicio:'08:00', horaFin:'09:00', actividad:'Breakfast' },
+  { horaInicio:'13:00', horaFin:'14:00', actividad:'Lunch' },
+  { horaInicio:'19:30', horaFin:'21:00', actividad:'Dinner' },
+];
+
+var FIRST_DAY_MEALS = [
+  { horaInicio:'16:00', horaFin:'17:00', actividad:'Welcome Snack' },
+  { horaInicio:'19:30', horaFin:'21:00', actividad:'Dinner' },
+];
+
+var LAST_DAY_MEALS_OPT1 = [
+  { horaInicio:'07:00', horaFin:'07:30', actividad:'Light Breakfast' },
+  { horaInicio:'10:45', horaFin:'12:00', actividad:'Brunch' },
+];
+var LAST_DAY_MEALS_OPT2 = [
+  { horaInicio:'08:00', horaFin:'09:00', actividad:'Breakfast' },
+];
+
+function selectMealPlan(opt) {
+  MEAL_PLAN = opt;
+  var o1 = document.getElementById('meal-opt1');
+  var o2 = document.getElementById('meal-opt2');
+  if (opt === 1) {
+    o1.style.border = '2px solid var(--teal)'; o1.style.background = 'var(--teal-lt)';
+    o1.querySelector('div').style.color = 'var(--teal-dk)';
+    o2.style.border = '1px solid var(--border)'; o2.style.background = 'white';
+    o2.querySelector('div').style.color = 'var(--text-sec)';
+  } else {
+    o2.style.border = '2px solid var(--teal)'; o2.style.background = 'var(--teal-lt)';
+    o2.querySelector('div').style.color = 'var(--teal-dk)';
+    o1.style.border = '1px solid var(--border)'; o1.style.background = 'white';
+    o1.querySelector('div').style.color = 'var(--text-sec)';
+  }
+  // Re-render days with new meal plan
+  if (window._dias) renderDaysWithMeals(window._dias, window._lastSavedActivities || []);
+}
+
+function getMealsForDay(idx, totalDays) {
+  var meals = MEAL_PLAN === 1 ? MEALS_OPT1 : MEALS_OPT2;
+  if (idx === 0) return FIRST_DAY_MEALS;
+  if (idx === totalDays - 1) return MEAL_PLAN === 1 ? LAST_DAY_MEALS_OPT1 : LAST_DAY_MEALS_OPT2;
+  return meals;
+}
+
 // Default activities pre-filled for each day (based on Amansala standard schedule)
 var DEFAULT_ACTIVITIES = [
-  { horaInicio:'07:00', horaFin:'08:00', actividad:'Morning Yoga', shala:'', opcional:false, precio:'' },
-  { horaInicio:'08:00', horaFin:'09:00', actividad:'Breakfast', shala:'', opcional:false, precio:'' },
-  { horaInicio:'13:00', horaFin:'14:00', actividad:'Lunch', shala:'', opcional:false, precio:'' },
-  { horaInicio:'16:30', horaFin:'17:30', actividad:'Afternoon Class', shala:'', opcional:false, precio:'' },
-  { horaInicio:'19:30', horaFin:'21:00', actividad:'Dinner', shala:'', opcional:false, precio:'' },
+  { horaInicio:'07:00', horaFin:'08:00', actividad:'Morning Yoga', shala:'' },
+  { horaInicio:'16:30', horaFin:'17:30', actividad:'Afternoon Class', shala:'' },
 ];
 
 var FIRST_DAY_ACTIVITIES = [
-  { horaInicio:'16:00', horaFin:'17:00', actividad:'Welcome Snack', shala:'', opcional:false, precio:'' },
-  { horaInicio:'17:45', horaFin:'19:00', actividad:'Opening Yoga | Orientation w Amansala', shala:'Beachfront', opcional:false, precio:'' },
-  { horaInicio:'19:30', horaFin:'21:00', actividad:'Dinner', shala:'', opcional:false, precio:'' },
+  { horaInicio:'17:45', horaFin:'19:00', actividad:'Opening Yoga | Orientation w Amansala', shala:'Beachfront' },
 ];
 
 var LAST_DAY_ACTIVITIES = [
-  { horaInicio:'07:00', horaFin:'07:30', actividad:'Light Breakfast', shala:'', opcional:false, precio:'' },
-  { horaInicio:'08:00', horaFin:'09:00', actividad:'Morning Class', shala:'Beachfront', opcional:false, precio:'' },
-  { horaInicio:'09:15', horaFin:'10:00', actividad:'Full Breakfast', shala:'', opcional:false, precio:'' },
-  { horaInicio:'', horaFin:'', actividad:'Departures', shala:'', opcional:false, precio:'' },
+  { horaInicio:'08:00', horaFin:'09:00', actividad:'Morning Class', shala:'Beachfront' },
+  { horaInicio:'', horaFin:'', actividad:'Departures', shala:'' },
 ];
 
 // ── ADD-ONS ───────────────────────────────────────────────
@@ -517,16 +586,11 @@ function initMaestro(id) {
 
     var dias = getDiasBetween(r['Fecha Inicio'], r['Fecha Fin']);
     window._retiro = r;
+    window._dias = dias;
     window._shalas = r['Shalas Permitidas'].split(', ');
 
-    // Pre-fill with default activities
-    var defaultFill = dias.map(function(dia, idx) {
-      var acts = idx === 0 ? FIRST_DAY_ACTIVITIES : idx === dias.length - 1 ? LAST_DAY_ACTIVITIES : DEFAULT_ACTIVITIES;
-      return acts.map(function(a) { return Object.assign({}, a, { dia: dia }); });
-    }).flat();
-
     renderAddons(dias, []);
-    renderDays(dias, defaultFill);
+    renderDaysWithMeals(dias, []);
     document.getElementById('schedule-form').style.display = 'block';
 
     // If existing saved activities, override the defaults
@@ -538,8 +602,9 @@ function initMaestro(id) {
         var savedRegular = ar.actividades.filter(function(a){
           return addonIds.indexOf(a['Actividad']) === -1 && (a['Actividad']||a.actividad) !== 'Offsite Dinner';
         });
+        window._lastSavedActivities = savedRegular;
         renderAddons(dias, savedAddons);
-        renderDays(dias, savedRegular);
+        renderDaysWithMeals(dias, savedRegular);
         if (savedOffsite) {
           var offDia = savedOffsite['Dia'] || savedOffsite.dia;
           addOffsiteDinner(offDia);
@@ -568,7 +633,49 @@ function getDiasBetween(ini, fin) {
   return dias;
 }
 
-function renderDays(dias, actividades) {
+function timeVal(t) {
+  if (!t) return 9999;
+  var p = t.split(':'); return parseInt(p[0])*60 + parseInt(p[1]||0);
+}
+
+function renderDaysWithMeals(dias, savedActivities) {
+  window._dias = dias;
+  // For each day: merge meals (locked) + saved/default activities, sorted by time
+  var allActs = dias.map(function(dia, idx) {
+    // Meals for this day
+    var meals = getMealsForDay(idx, dias.length).map(function(m) {
+      // If saved, use saved time; otherwise default
+      var saved = savedActivities.find(function(s){
+        return (s['Dia']||s.dia) === dia && (s['Actividad']||s.actividad) === m.actividad;
+      });
+      return Object.assign({}, m, { dia: dia,
+        horaInicio: saved ? (saved['Hora Inicio']||saved.horaInicio||m.horaInicio) : m.horaInicio,
+        horaFin:    saved ? (saved['Hora Fin']||saved.horaFin||m.horaFin) : m.horaFin,
+      });
+    });
+
+    // Non-meal activities for this day (default or saved)
+    var mealNames = meals.map(function(m){ return m.actividad.toLowerCase(); });
+    var nonMeals = savedActivities.filter(function(s){
+      return (s['Dia']||s.dia) === dia && mealNames.indexOf((s['Actividad']||s.actividad||'').toLowerCase()) === -1;
+    });
+
+    // If no saved non-meals, use defaults
+    if (nonMeals.length === 0) {
+      var defActs = idx === 0 ? FIRST_DAY_ACTIVITIES : idx === dias.length-1 ? LAST_DAY_ACTIVITIES : DEFAULT_ACTIVITIES;
+      nonMeals = defActs.map(function(a){ return Object.assign({}, a, { dia: dia }); });
+    }
+
+    // Merge and sort by time
+    return meals.concat(nonMeals).sort(function(a,b){
+      return timeVal(a.horaInicio||a['Hora Inicio']) - timeVal(b.horaInicio||b['Hora Inicio']);
+    });
+  });
+
+  // Flatten and render
+  var flat = allActs.reduce(function(acc,v){ return acc.concat(v); }, []);
+  renderDays(dias, flat);
+}
   var cont = document.getElementById('days-container');
   cont.innerHTML = '';
   dias.forEach(function(dia) {
@@ -684,8 +791,16 @@ function getOffsiteDinner() {
   };
 }
 
-// Activities that never need a shala
-var NO_SHALA_ACTIVITIES = [
+// Activities that are locked (no delete, no name edit — time only)
+var LOCKED_ACTIVITIES = [
+  'breakfast','lunch','dinner','welcome snack','snack','brunch',
+  'light breakfast','full breakfast','departures'
+];
+
+function isLocked(activityName) {
+  if (!activityName) return false;
+  return LOCKED_ACTIVITIES.indexOf(activityName.toLowerCase().trim()) !== -1;
+}
   'breakfast','lunch','dinner','welcome snack','snack','brunch',
   'light breakfast','full breakfast','departures','offsite dinner'
 ];
@@ -739,6 +854,7 @@ function addActRow(dia, data) {
   var selectedShala = data ? (data.shala || data['Shala'] || '') : '';
   var actName = data ? (data.actividad || data['Actividad'] || '') : '';
   var showShala = needsShala(actName);
+  var locked = isLocked(actName);
 
   var recOpts = recommended.map(function(s) {
     return '<option value="'+s+'"'+(selectedShala===s?' selected':'')+'>'+s+' ★</option>';
@@ -754,29 +870,41 @@ function addActRow(dia, data) {
   var row = document.createElement('div');
   row.className = 'act-row';
   row.style.flexWrap = 'wrap';
-  row.innerHTML =
-    '<input type="time" class="f-inicio" value="'+(data&&(data['Hora Inicio']||data.horaInicio)||'')+'" />' +
-    '<input type="time" class="f-fin"    value="'+(data&&(data['Hora Fin']||data.horaFin)||'')+'" />' +
-    '<input type="text" class="f-act"    value="'+actName+'" placeholder="Activity name" />' +
-    '<select class="f-shala" onchange="checkShalaWarning(this)" style="'+(showShala?'':'visibility:hidden;')+'">'+opts+'</select>' +
-    '<button class="btn-del" onclick="this.closest(\'.act-row\').remove()">×</button>';
+
+  // Locked meal row: name is plain text, no shala, no delete button
+  if (locked) {
+    row.innerHTML =
+      '<input type="time" class="f-inicio" value="'+(data&&(data['Hora Inicio']||data.horaInicio)||'')+'" />' +
+      '<input type="time" class="f-fin"    value="'+(data&&(data['Hora Fin']||data.horaFin)||'')+'" />' +
+      '<input type="text" class="f-act" value="'+actName+'" readonly style="background:var(--gray-lt);color:var(--text-sec);cursor:default;border-color:var(--border);" />' +
+      '<div style="visibility:hidden;width:130px;"></div>' +
+      '<div style="width:32px;"></div>';
+  } else {
+    row.innerHTML =
+      '<input type="time" class="f-inicio" value="'+(data&&(data['Hora Inicio']||data.horaInicio)||'')+'" />' +
+      '<input type="time" class="f-fin"    value="'+(data&&(data['Hora Fin']||data.horaFin)||'')+'" />' +
+      '<input type="text" class="f-act"    value="'+actName+'" placeholder="Activity name" />' +
+      '<select class="f-shala" onchange="checkShalaWarning(this)" style="'+(showShala?'':'visibility:hidden;')+'">'+opts+'</select>' +
+      '<button class="btn-del" onclick="this.closest(\'.act-row\').remove()">×</button>';
+
+    // Live: toggle shala visibility as user types
+    row.querySelector('.f-act').addEventListener('input', function() {
+      var sel = row.querySelector('.f-shala');
+      var warn = row.querySelector('.shala-warn');
+      if (needsShala(this.value)) {
+        sel.style.visibility = '';
+      } else {
+        sel.style.visibility = 'hidden';
+        sel.value = '';
+        if (warn) warn.style.display = 'none';
+      }
+    });
+
+    // Check warning on load
+    if (selectedShala && showShala) checkShalaWarning(row.querySelector('.f-shala'));
+  }
+
   cont.appendChild(row);
-
-  // Live: toggle shala visibility as user types activity name
-  row.querySelector('.f-act').addEventListener('input', function() {
-    var sel = row.querySelector('.f-shala');
-    var warn = row.querySelector('.shala-warn');
-    if (needsShala(this.value)) {
-      sel.style.visibility = '';
-    } else {
-      sel.style.visibility = 'hidden';
-      sel.value = '';
-      if (warn) warn.style.display = 'none';
-    }
-  });
-
-  // Check warning on load
-  if (selectedShala && showShala) checkShalaWarning(row.querySelector('.f-shala'));
 }
 
 // ── RECOGER DATOS DEL FORM ────────────────────────────────
