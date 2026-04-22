@@ -821,17 +821,17 @@ function loadRetiros() {
     }
     el.innerHTML = res.retiros.map(function(r) {
       var pill = r['Estado'] === 'Completo'
-        ? '<span class="status-pill status-comp">Completo</span>'
-        : '<span class="status-pill status-pend">Pendiente</span>';
+        ? '<span class="status-pill status-comp">Complete</span>'
+        : '<span class="status-pill status-pend">Pending</span>';
       var docBtn = r['Doc URL']
-        ? '<a href="'+r['Doc URL']+'" target="_blank" style="font-size:12px;color:var(--teal);font-family:sans-serif;">Ver Doc ↗</a>'
+        ? '<a href="'+r['Doc URL']+'" target="_blank" style="font-size:12px;color:var(--teal);font-family:sans-serif;">View Doc ↗</a>'
         : '';
       return '<div class="retiro-item">' +
         '<div><div style="font-weight:bold;">' + r['Nombre Grupo'] + '</div>' +
-        '<div class="retiro-meta">' + r['Fecha Inicio'] + ' → ' + r['Fecha Fin'] + ' · ' + r['Pax'] + ' pax · ' + r['Shalas Permitidas'] + '</div>' +
-        '<div class="retiro-meta" style="margin-top:3px;">Edición hasta: ' + r['Fecha Limite Edicion'] + ' &nbsp;·&nbsp; ' + r['Email Maestro'] + '</div></div>' +
+        '<div class="retiro-meta">' + fmtDate(r['Fecha Inicio']) + ' → ' + fmtDate(r['Fecha Fin']) + ' · ' + r['Pax'] + ' guests · ' + r['Shalas Permitidas'] + '</div>' +
+        '<div class="retiro-meta" style="margin-top:3px;">Edit deadline: ' + fmtDateShort(r['Fecha Limite Edicion']) + ' &nbsp;·&nbsp; ' + r['Email Maestro'] + '</div></div>' +
         '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' + pill + docBtn +
-        '<a href="' + r['Link Formulario'] + '" target="_blank" style="font-size:11px;color:var(--text-sec);font-family:sans-serif;">Ver formulario ↗</a>' +
+        '<a href="' + r['Link Formulario'] + '" target="_blank" style="font-size:11px;color:var(--text-sec);font-family:sans-serif;">View form ↗</a>' +
         '</div></div>';
     }).join('');
   });
@@ -861,22 +861,65 @@ function loadCalendario() {
   });
 }
 
+function fmtTime(val) {
+  if (!val) return '';
+  // Handle ISO timestamps from Google Sheets (e.g. 1899-12-30T23:32:04.000Z)
+  if (val.toString().indexOf('T') !== -1) {
+    var d = new Date(val);
+    var h = d.getUTCHours(), m = d.getUTCMinutes();
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    var h12 = h % 12 || 12;
+    return h12 + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+  }
+  // Handle HH:MM string
+  var parts = val.toString().split(':');
+  var h = parseInt(parts[0]), m = parseInt(parts[1]||0);
+  var ampm = h >= 12 ? 'PM' : 'AM';
+  var h12 = h % 12 || 12;
+  return h12 + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+}
+
+function fmtCalDate(str) {
+  if (!str) return '';
+  // Handle ISO timestamp
+  var d = str.indexOf('T') !== -1 ? new Date(str) : new Date(str + 'T12:00:00');
+  var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var dayName = days[str.indexOf('T') !== -1 ? d.getUTCDay() : d.getDay()];
+  var month = months[str.indexOf('T') !== -1 ? d.getUTCMonth() : d.getMonth()];
+  var date = str.indexOf('T') !== -1 ? d.getUTCDate() : d.getDate();
+  var year = str.indexOf('T') !== -1 ? d.getUTCFullYear() : d.getFullYear();
+  return dayName.toUpperCase() + ', ' + month.toUpperCase() + ' ' + date + ', ' + year;
+}
+
+function timeToMinsVal(val) {
+  if (!val) return 0;
+  if (val.toString().indexOf('T') !== -1) {
+    var d = new Date(val);
+    return d.getUTCHours() * 60 + d.getUTCMinutes();
+  }
+  var parts = val.toString().split(':');
+  return parseInt(parts[0]) * 60 + parseInt(parts[1]||0);
+}
+
+var SHALA_ABBR = { 'Sky':'Sky', 'Beachfront':'BF', 'Heaven':'Heaven', 'Grande':'G', 'Chica':'Chica' };
+
 function renderCalendario(ocupadas, conflictos) {
-  // Conflictos box
+  // Conflict alerts
   var cbox = document.getElementById('conflict-box');
   if (conflictos.length > 0) {
     cbox.innerHTML = conflictos.map(function(c) {
       var alt = c.shalasAlternativas && c.shalasAlternativas.length > 0
-        ? ' Alternativa disponible: <strong>' + c.shalasAlternativas.join(', ') + '</strong>.'
-        : ' No hay shalas alternativas disponibles en ese horario.';
-      return '<div class="alert alert-error show" style="margin-bottom:8px;">⚠ Conflicto en <strong>' + c.shala + '</strong> · ' + c.dia +
+        ? ' Available alternative: <strong>' + c.shalasAlternativas.join(', ') + '</strong>.'
+        : ' No alternative shalas available at that time.';
+      return '<div class="alert alert-error show" style="margin-bottom:8px;">⚠ Conflict in <strong>' + c.shala + '</strong> · ' + fmtCalDate(c.dia) +
         ' · ' + c.grupo1 + ' vs ' + c.grupo2 + '.' + alt + '</div>';
     }).join('');
   } else {
     cbox.innerHTML = '';
   }
 
-  // Obtener grupos únicos y asignar colores
+  // Assign colors to groups
   var grupos = {};
   ocupadas.forEach(function(o) {
     if (!grupos[o['Retiro ID']]) {
@@ -885,51 +928,59 @@ function renderCalendario(ocupadas, conflictos) {
     }
   });
 
-  // Leyenda
+  // Legend
   var legend = document.getElementById('cal-legend');
   legend.innerHTML = Object.keys(grupos).map(function(id) {
     var g = grupos[id];
     return '<div class="leg"><div class="leg-dot" style="background:'+g.color.bg+';border:1px solid '+g.color.text+';"></div>' + g.nombre + '</div>';
-  }).join('') + '<div class="leg"><div class="leg-dot" style="background:#FCEBEB;border:1px dashed #A32D2D;"></div>Conflicto</div>';
+  }).join('') + (conflictos.length > 0 ? '<div class="leg"><div class="leg-dot" style="background:#FCEBEB;border:1px dashed #A32D2D;"></div>Conflict</div>' : '');
 
-  // Obtener días únicos y ordenar
+  // Get unique days sorted
   var dias = [...new Set(ocupadas.map(function(o){ return o['Dia']; }))].sort();
-  if (dias.length === 0) { document.getElementById('cal-wrap').innerHTML = '<div class="loader" style="padding:24px;">No hay actividades con shala asignada aún.</div>'; return; }
+  if (dias.length === 0) {
+    document.getElementById('cal-wrap').innerHTML = '<div class="loader" style="padding:24px;">No activities with shalas assigned yet.</div>';
+    return;
+  }
 
-  var shalas = ['Sky','Beachfront','Heaven','Grande','Chica'];
-  var horas = [];
-  for (var h = 6; h <= 22; h++) horas.push(String(h).padStart(2,'0') + ':00');
-
-  // Construir tabla: filas = shalas, columnas = días, celdas = horas
-  // Para simplificar usamos una tabla shala × día con los eventos agrupados
   var conflictSet = new Set(conflictos.map(function(c){ return c.shala+'|'+c.dia; }));
 
-  var html = '<table class="cal"><thead><tr><th class="shala-col">Shala</th>' +
-    dias.map(function(d){ var dt=new Date(d); return '<th>'+DAY_NAMES[dt.getDay()]+'<br><small>'+d+'</small></th>'; }).join('') +
-    '</tr></thead><tbody>';
+  // Build Skedda-style: one section per day, rows sorted by time
+  var html = '';
+  dias.forEach(function(dia) {
+    var evsDia = ocupadas.filter(function(o){ return o['Dia'] === dia; });
+    if (evsDia.length === 0) return;
 
-  shalas.forEach(function(shala) {
-    html += '<tr><td class="time-col" style="font-weight:bold;color:var(--text);">'+shala+'</td>';
-    dias.forEach(function(dia) {
-      var evs = ocupadas.filter(function(o){ return o['Shala']===shala && o['Dia']===dia; });
-      var isConflict = conflictSet.has(shala+'|'+dia);
-      html += '<td>';
-      if (evs.length === 0) { html += '<div style="min-height:32px;"></div>'; }
-      evs.forEach(function(e) {
-        var g = grupos[e['Retiro ID']] || { color: GROUP_COLORS[0] };
-        var cls = isConflict && evs.length > 1 ? 'cal-event ev-conflict' : 'cal-event';
-        var style = cls === 'cal-event' ? 'background:'+g.color.bg+';color:'+g.color.text+';' : '';
-        html += '<div class="'+cls+'" style="'+style+'">' +
-          '<div style="font-weight:bold;font-size:10px;">'+e['Nombre Grupo']+'</div>' +
-          '<div>'+e['Hora Inicio']+'–'+e['Hora Fin']+'</div>' +
-          '<div style="opacity:0.8;">'+e['Actividad']+'</div>' +
-          '</div>';
-      });
-      html += '</td>';
+    // Sort by start time
+    evsDia.sort(function(a,b){ return timeToMinsVal(a['Hora Inicio']) - timeToMinsVal(b['Hora Inicio']); });
+
+    html += '<div style="margin-bottom:28px;">';
+    html += '<div style="font-size:12px;font-weight:bold;color:var(--teal);letter-spacing:0.06em;font-family:sans-serif;padding:8px 0 10px;border-bottom:2px solid var(--teal);">' + fmtCalDate(dia) + '</div>';
+
+    evsDia.forEach(function(e) {
+      var g = grupos[e['Retiro ID']] || { color: GROUP_COLORS[0], nombre: e['Nombre Grupo'] };
+      var isConflict = conflictSet.has(e['Shala']+'|'+dia);
+      var tStart = fmtTime(e['Hora Inicio']);
+      var tEnd   = fmtTime(e['Hora Fin']);
+      var timeStr = tStart + (tEnd ? '–' + tEnd : '');
+      var shalaAbbr = SHALA_ABBR[e['Shala']] || e['Shala'] || '—';
+
+      var rowBg = isConflict ? '#FCEBEB' : 'transparent';
+      var dotColor = isConflict ? '#E24B4A' : g.color.bg;
+      var dotBorder = isConflict ? '#A32D2D' : g.color.text;
+
+      html += '<div style="display:grid;grid-template-columns:16px 130px 80px 180px 1fr;gap:10px;align-items:center;' +
+        'padding:9px 8px;border-bottom:0.5px solid var(--border);background:'+rowBg+';font-family:sans-serif;font-size:13px;">' +
+        '<div style="width:10px;height:10px;border-radius:50%;background:'+dotColor+';border:1px solid '+dotBorder+';flex-shrink:0;"></div>' +
+        '<div style="color:var(--text-sec);font-size:12px;">' + timeStr + '</div>' +
+        '<div style="font-weight:bold;font-size:12px;color:var(--teal-dk);">' + shalaAbbr + '</div>' +
+        '<div style="font-size:12px;color:var(--text-sec);">' + g.nombre + '</div>' +
+        '<div style="color:var(--text);">' + e['Actividad'] + (isConflict ? ' <span style="font-size:10px;background:#FCEBEB;color:#A32D2D;border-radius:3px;padding:1px 5px;margin-left:4px;">CONFLICT</span>' : '') + '</div>' +
+        '</div>';
     });
-    html += '</tr>';
+
+    html += '</div>';
   });
-  html += '</tbody></table>';
+
   document.getElementById('cal-wrap').innerHTML = html;
 }
 
