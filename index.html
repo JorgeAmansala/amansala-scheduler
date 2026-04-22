@@ -684,7 +684,16 @@ function getOffsiteDinner() {
   };
 }
 
-var SHALA_RULES = {
+// Activities that never need a shala
+var NO_SHALA_ACTIVITIES = [
+  'breakfast','lunch','dinner','welcome snack','snack','brunch',
+  'light breakfast','full breakfast','departures','offsite dinner'
+];
+
+function needsShala(activityName) {
+  if (!activityName) return true;
+  return NO_SHALA_ACTIVITIES.indexOf(activityName.toLowerCase().trim()) === -1;
+}
   'Sky':        { min: 1,  max: 7  },
   'Beachfront': { min: 8,  max: 25 },
   'Heaven':     { min: 8,  max: 25 },
@@ -726,8 +735,9 @@ function addActRow(dia, data) {
   var recommended = shalasParaPax(pax);
   var allShalas = ['Sky','Beachfront','Heaven','Grande','Chica'];
   var selectedShala = data ? (data.shala || data['Shala'] || '') : '';
+  var actName = data ? (data.actividad || data['Actividad'] || '') : '';
+  var showShala = needsShala(actName);
 
-  // Recommended shalas first with label, then others
   var recOpts = recommended.map(function(s) {
     return '<option value="'+s+'"'+(selectedShala===s?' selected':'')+'>'+s+' ★</option>';
   }).join('');
@@ -745,16 +755,26 @@ function addActRow(dia, data) {
   row.innerHTML =
     '<input type="time" class="f-inicio" value="'+(data&&(data['Hora Inicio']||data.horaInicio)||'')+'" />' +
     '<input type="time" class="f-fin"    value="'+(data&&(data['Hora Fin']||data.horaFin)||'')+'" />' +
-    '<input type="text" class="f-act"    value="'+(data&&(data['Actividad']||data.actividad)||'')+'" placeholder="Activity name" />' +
-    '<select class="f-shala" onchange="checkShalaWarning(this)">'+opts+'</select>' +
+    '<input type="text" class="f-act"    value="'+actName+'" placeholder="Activity name" />' +
+    '<select class="f-shala" onchange="checkShalaWarning(this)" style="'+(showShala?'':'visibility:hidden;')+'">'+opts+'</select>' +
     '<button class="btn-del" onclick="this.closest(\'.act-row\').remove()">×</button>';
   cont.appendChild(row);
 
-  // Check on load if pre-selected shala is out of range
-  if (selectedShala) {
+  // Live: toggle shala visibility as user types activity name
+  row.querySelector('.f-act').addEventListener('input', function() {
     var sel = row.querySelector('.f-shala');
-    checkShalaWarning(sel);
-  }
+    var warn = row.querySelector('.shala-warn');
+    if (needsShala(this.value)) {
+      sel.style.visibility = '';
+    } else {
+      sel.style.visibility = 'hidden';
+      sel.value = '';
+      if (warn) warn.style.display = 'none';
+    }
+  });
+
+  // Check warning on load
+  if (selectedShala && showShala) checkShalaWarning(row.querySelector('.f-shala'));
 }
 
 // ── RECOGER DATOS DEL FORM ────────────────────────────────
