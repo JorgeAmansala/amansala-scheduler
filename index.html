@@ -430,6 +430,17 @@
             <option value="Chica">Chica</option>
           </select>
         </div>
+        <div class="form-group">
+          <label>Opening Yoga | Orientation</label>
+          <select id="n-opening-shala">
+            <option value="">— not assigned —</option>
+            <option value="Sky">Sky</option>
+            <option value="Beachfront">Beachfront</option>
+            <option value="Heaven">Heaven</option>
+            <option value="Grande">Grande</option>
+            <option value="Chica">Chica</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -742,6 +753,7 @@ function initMaestro(id) {
     window._shalas = r['Shalas Permitidas'].split(', ');
     window._amShala = r['AM Shala'] || r['AM_Shala'] || r['amShala'] || '';
     window._pmShala = r['PM Shala'] || r['PM_Shala'] || r['pmShala'] || '';
+    window._openingShala = r['Opening Shala'] || r['Opening_Shala'] || r['openingShala'] || '';
 
     // Parse staff-set included addons
     var includedAddons = [];
@@ -814,6 +826,7 @@ function renderDaysWithMeals(dias, savedActivities) {
 
   var amShala = window._amShala || '';
   var pmShala = window._pmShala || '';
+  var openingShala = window._openingShala || '';
 
   var allActs = dias.map(function(dia, idx) {
     var meals = getMealsForDay(idx, dias.length).map(function(m) {
@@ -836,8 +849,21 @@ function renderDaysWithMeals(dias, savedActivities) {
       nonMeals = defActs.map(function(a){ return Object.assign({}, a, { dia: dia }); });
     }
 
-    // Inject AM/PM class shalas as locked activities if set by staff
+    // Inject AM/PM class shalas and Opening Yoga shala as locked if set by staff
     var staffLocked = [];
+
+    // Opening Yoga — first day only
+    if (openingShala && idx === 0) {
+      var existingOpening = nonMeals.find(function(a){
+        return (a.actividad||a['Actividad']||'').toLowerCase().indexOf('opening yoga') !== -1;
+      });
+      if (!existingOpening) {
+        staffLocked.push({ dia: dia, horaInicio:'17:45', horaFin:'19:00', actividad:'Opening Yoga | Orientation w Amansala', shala: openingShala, staffLocked: true });
+      } else {
+        existingOpening.shala = openingShala;
+        existingOpening.staffLocked = true;
+      }
+    }
     if (amShala && idx > 0) {
       var existing = nonMeals.find(function(a){
         var n = (a.actividad||a['Actividad']||'').toLowerCase();
@@ -1567,6 +1593,7 @@ function crearRetiro() {
   // Collect AM/PM shalas
   var amShala = document.getElementById('n-am-shala').value;
   var pmShala = document.getElementById('n-pm-shala').value;
+  var openingShala = document.getElementById('n-opening-shala').value;
 
   // Collect included addons
   var includedAddons = [];
@@ -1580,7 +1607,7 @@ function crearRetiro() {
 
   api_post('crearRetiro', {
     nombre: nombre, emailMaestro: email, fechaInicio: inicio, fechaFin: fin, pax: pax,
-    amShala: amShala, pmShala: pmShala,
+    amShala: amShala, pmShala: pmShala, openingShala: openingShala,
     offsiteDay: '',
     includedAddons: JSON.stringify(includedAddons)
   }).then(function(res) {
