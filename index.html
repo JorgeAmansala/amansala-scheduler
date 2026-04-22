@@ -1119,7 +1119,7 @@ function renderRetirosList(retiros, pending) {
               '<button onclick="updateApproval(\''+retiroId+'\',\''+actId+'\',\'declined\')" style="font-size:11px;background:#A32D2D;color:white;border:none;border-radius:4px;padding:3px 10px;cursor:pointer;">Decline</button>' +
               '</div>';
           return '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#633806;padding:4px 0;border-top:0.5px solid #FAC775;">' +
-            '<span><strong>' + (a['Shala']||a.shala) + '</strong> · ' + (a['Dia']||a.dia) + ' · ' + (a['Actividad']||a.actividad) + '</span>' +
+            '<span><strong>' + (a['Shala']||a.shala) + '</strong> · ' + fmtDate(a['Dia']||a.dia) + ' · ' + fmtTime(a['Hora Inicio']||a.horaInicio) + ' · ' + (a['Actividad']||a.actividad) + '</span>' +
             statusHtml + '</div>';
         }).join('') + '</div>';
     }
