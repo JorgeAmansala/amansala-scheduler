@@ -834,6 +834,8 @@ function isLocked(activityName) {
   if (!activityName) return false;
   return LOCKED_ACTIVITIES.indexOf(activityName.toLowerCase().trim()) !== -1;
 }
+
+var NO_SHALA_ACTIVITIES = [
   'breakfast','lunch','dinner','welcome snack','snack','brunch',
   'light breakfast','full breakfast','departures','offsite dinner'
 ];
