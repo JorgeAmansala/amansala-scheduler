@@ -500,6 +500,11 @@ function showTab(name) {
     var el = document.getElementById('panel-' + n);
     if(el) el.style.display = (n === name) ? 'block' : 'none';
   });
+  // Restore calendar filter values when switching to calendar tab
+  if (name === 'calendario') {
+    if (window._calFrom) document.getElementById('cal-from').value = window._calFrom;
+    if (window._calTo)   document.getElementById('cal-to').value   = window._calTo;
+  }
 }
 
 // ── MAESTRO: init ─────────────────────────────────────────
@@ -1384,6 +1389,9 @@ function loadCalendario() {
 function filterCalendario() {
   var from = document.getElementById('cal-from').value;
   var to   = document.getElementById('cal-to').value;
+  // Persist filter values in memory
+  window._calFrom = from;
+  window._calTo   = to;
   var ocupadas = window._calOcupadas;
   var conflictos = window._calConflictos;
 
