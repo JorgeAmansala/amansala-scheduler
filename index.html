@@ -1399,6 +1399,14 @@ function enviarSchedule() {
   var acts = collectActividades();
   if (acts.length === 0) { showAlert('alert-maestro', 'error', 'Add at least one activity before submitting.'); return; }
   var r = window._retiro;
+  var payload = JSON.stringify(acts);
+  console.log('Submitting', acts.length, 'activities, payload size:', payload.length, 'chars');
+  if (payload.length > 7000) {
+    // URL too long for JSONP — split or warn
+    console.warn('Payload too large for JSONP:', payload.length);
+    showAlert('alert-maestro', 'error', 'Schedule has too many activities for a single request. Please reduce activities or contact Amansala.');
+    return;
+  }
   api_post('guardarSchedule', {
     retiroId:     retiroId,
     actividades:  JSON.stringify(acts),
