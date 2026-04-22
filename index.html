@@ -863,7 +863,14 @@ function renderDaysWithMeals(dias, savedActivities) {
       }
     }
 
-    return meals.concat(staffLocked).concat(nonMeals).sort(function(a,b){
+    // Inject included addons for this day as locked rows
+    var includedForDay = (window._includedAddons || []).filter(function(a){
+      return a.dia === dia;
+    }).map(function(a){
+      return { dia: dia, horaInicio: a.time || '', horaFin: '', actividad: a.name, shala: '', staffLocked: false, includedLocked: true };
+    });
+
+    return meals.concat(staffLocked).concat(includedForDay).concat(nonMeals).sort(function(a,b){
       return timeVal(a.horaInicio||a['Hora Inicio']) - timeVal(b.horaInicio||b['Hora Inicio']);
     });
   });
@@ -1089,6 +1096,7 @@ function addActRow(dia, data) {
   var actName = data ? (data.actividad || data['Actividad'] || '') : '';
   var showShala = needsShala(actName);
   var staffLocked = data ? (data.staffLocked === true) : false;
+  var includedLocked = data ? (data.includedLocked === true) : false;
   var locked = isLocked(actName);
 
   var recOpts = recommended.map(function(s) {
@@ -1123,6 +1131,18 @@ function addActRow(dia, data) {
     if (musicVal === 'Loud') setTimeout(function(){ checkMusicLoud(row.querySelector('.f-music')); }, 0);
 
   // Locked meal row: no shala, no music, no delete
+  } else if (includedLocked) {
+    // Included addon: locked name, no shala, no delete, shows "Included" badge
+    row.style.background = 'var(--teal-lt)';
+    row.style.borderRadius = 'var(--radius-sm)';
+    row.style.padding = '2px 4px';
+    row.innerHTML =
+      '<input type="time" class="f-inicio" value="'+(data&&(data['Hora Inicio']||data.horaInicio)||'')+'" onchange="sortDayRows(\''+dia+'\')" />' +
+      '<input type="time" class="f-fin"    value="'+(data&&(data['Hora Fin']||data.horaFin)||'')+'" />' +
+      '<input type="text" class="f-act" value="'+actName+'" readonly style="background:rgba(255,255,255,0.5);color:var(--teal-dk);cursor:default;border-color:var(--teal-lt);" />' +
+      '<div style="font-size:11px;font-weight:bold;color:var(--teal-dk);font-family:sans-serif;padding:7px 10px;">Included</div>' +
+      '<div style="width:110px;"></div>' +
+      '<div style="width:32px;"></div>';
   } else if (locked) {
     row.innerHTML =
       '<input type="time" class="f-inicio" value="'+(data&&(data['Hora Inicio']||data.horaInicio)||'')+'" onchange="sortDayRows(\''+dia+'\')" />' +
@@ -1172,6 +1192,7 @@ function collectActividades() {
     var dia = block.dataset.dia;
     block.querySelectorAll('.act-row').forEach(function(row) {
       if (row.dataset.removedDinner === 'true') return;
+      if (row.style.background === 'var(--teal-lt)') return; // skip includedLocked rows
       var actEl = row.querySelector('.f-act');
       if (!actEl) return;
       var act = actEl.value.trim();
