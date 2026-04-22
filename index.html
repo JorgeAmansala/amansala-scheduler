@@ -1067,6 +1067,53 @@ function timeToMins(t) {
   return parseInt(parts[0]||0) * 60 + parseInt(parts[1]||0);
 }
 
+function getAvailableShalas(dia, hIni, hFin, recommended) {
+  var ocupadas = window._calOcupadas || [];
+  var myRetiroId = window._retiro ? window._retiro['ID'] : '';
+  var allShalas = ['Sky','Beachfront','Heaven','Grande','Chica'];
+  return allShalas.filter(function(shala) {
+    return !ocupadas.some(function(o) {
+      if (o['Shala'] !== shala) return false;
+      if ((o['Dia']||'').toString().substring(0,10) !== dia) return false;
+      if (o['Retiro ID'] === myRetiroId) return false;
+      var oIni = timeToMins(o['Hora Inicio'] || '');
+      var oFin = timeToMins(o['Hora Fin'] || o['Hora Inicio'] || '');
+      var mIni = timeToMins(hIni || '');
+      var mFin = hFin ? timeToMins(hFin) : mIni + 60;
+      return mIni < oFin && mFin > oIni;
+    });
+  });
+}
+
+function buildShalaOpts(dia, hIni, hFin, recommended, selectedShala) {
+  var available = getAvailableShalas(dia, hIni, hFin, recommended);
+  var opts = '<option value="">— Choose your shala —</option>';
+  var recAvail = recommended.filter(function(s){ return available.indexOf(s) !== -1; });
+  var otherAvail = available.filter(function(s){ return recommended.indexOf(s) === -1; });
+  if (recAvail.length > 0) {
+    opts += '<optgroup label="Recommended">' + recAvail.map(function(s){
+      return '<option value="'+s+'"'+(selectedShala===s?' selected':'')+'>'+s+' ★</option>';
+    }).join('') + '</optgroup>';
+  }
+  if (otherAvail.length > 0) {
+    opts += '<optgroup label="Other shalas">' + otherAvail.map(function(s){
+      return '<option value="'+s+'"'+(selectedShala===s?' selected':'')+'>'+s+'</option>';
+    }).join('') + '</optgroup>';
+  }
+  return opts;
+}
+
+function refreshShalaOpts(row, dia) {
+  var sel = row.querySelector('.f-shala');
+  if (!sel) return;
+  var hIni = row.querySelector('.f-inicio') ? row.querySelector('.f-inicio').value : '';
+  var hFin = row.querySelector('.f-fin') ? row.querySelector('.f-fin').value : '';
+  var pax = parseInt((window._retiro && window._retiro['Pax']) || 0);
+  var recommended = shalasParaPax(pax);
+  var current = sel.value;
+  sel.innerHTML = buildShalaOpts(dia, hIni, hFin, recommended, current);
+}
+
 function shalasParaPax(pax) {
   var n = parseInt(pax) || 0;
   return Object.keys(SHALA_RULES).filter(function(s) {
@@ -1190,16 +1237,8 @@ function addActRow(dia, data) {
   var includedLocked = data ? (data.includedLocked === true) : false;
   var locked = isLocked(actName);
 
-  var recOpts = recommended.map(function(s) {
-    return '<option value="'+s+'"'+(selectedShala===s?' selected':'')+'>'+s+' ★</option>';
-  }).join('');
-  var otherOpts = allShalas.filter(function(s){ return recommended.indexOf(s)===-1; }).map(function(s) {
-    return '<option value="'+s+'"'+(selectedShala===s?' selected':'')+'>'+s+'</option>';
-  }).join('');
-
-  var opts = '<option value="">— no shala —</option>';
-  if (recOpts) opts += '<optgroup label="Recommended">'+recOpts+'</optgroup>';
-  if (otherOpts) opts += '<optgroup label="Other shalas">'+otherOpts+'</optgroup>';
+  var recOpts = null; // will use buildShalaOpts instead
+  var opts = buildShalaOpts(dia, data&&(data['Hora Inicio']||data.horaInicio)||'', data&&(data['Hora Fin']||data.horaFin)||'', recommended, selectedShala);
 
   var row = document.createElement('div');
   row.className = 'act-row';
@@ -1273,6 +1312,7 @@ function addActRow(dia, data) {
 
     // Re-check shala availability when time changes
     row.querySelector('.f-inicio').addEventListener('change', function() {
+      refreshShalaOpts(row, dia);
       var sel = row.querySelector('.f-shala');
       if (sel && sel.value) checkShalaWarning(sel);
     });
