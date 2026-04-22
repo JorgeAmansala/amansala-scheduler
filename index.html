@@ -765,8 +765,32 @@ function initMaestro(id) {
     // Load occupancy data for real-time shala availability checks
     if (!window._calOcupadas) {
       api('getConflictos', {}).then(function(cr) {
-        if (cr.ok) { window._calOcupadas = cr.ocupadas || []; window._calConflictos = cr.conflictos || []; }
+        if (cr.ok) {
+          window._calOcupadas = cr.ocupadas || [];
+          window._calConflictos = cr.conflictos || [];
+          // Refresh all shala dropdowns now that occupancy data is available
+          document.querySelectorAll('.act-row').forEach(function(row) {
+            var sel = row.querySelector('.f-shala');
+            if (!sel) return;
+            var block = row.closest('.day-block');
+            if (!block) return;
+            var dia = block.dataset.dia;
+            refreshShalaOpts(row, dia);
+            if (sel.value) checkShalaWarning(sel);
+          });
+        }
       });
+    } else {
+      // Data already loaded — refresh dropdowns immediately after render
+      setTimeout(function() {
+        document.querySelectorAll('.act-row').forEach(function(row) {
+          var sel = row.querySelector('.f-shala');
+          if (!sel) return;
+          var block = row.closest('.day-block');
+          if (!block) return;
+          refreshShalaOpts(row, block.dataset.dia);
+        });
+      }, 100);
     }
 
     // Parse staff-set included addons
@@ -953,6 +977,17 @@ function renderDays(dias, actividades) {
       addActRow(dia);
     }
   });
+  // If occupancy data already loaded, refresh all dropdowns
+  if (window._calOcupadas) {
+    setTimeout(function() {
+      document.querySelectorAll('.day-block').forEach(function(block) {
+        var dia = block.dataset.dia;
+        block.querySelectorAll('.act-row').forEach(function(row) {
+          if (row.querySelector('.f-shala')) refreshShalaOpts(row, dia);
+        });
+      });
+    }, 50);
+  }
 }
 
 // ── OFFSITE DINNER ────────────────────────────────────────
