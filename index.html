@@ -1560,16 +1560,36 @@ function updatePaxHint(v) {
 function api(action, params) {
   var url = GAS_URL + '?action=' + action;
   Object.keys(params).forEach(function(k){ url += '&' + k + '=' + encodeURIComponent(params[k]); });
-  return fetch(url).then(function(r){ return r.json(); }).catch(function(){ return { ok:false, error:'Error de conexión' }; });
+  return gasRequest(url);
 }
 
 function api_post(action, data) {
-  // Use GET with encoded params to avoid CORS preflight issues with Apps Script
   var url = GAS_URL + '?action=' + action;
   Object.keys(data).forEach(function(k) {
     if (k !== 'action') url += '&' + k + '=' + encodeURIComponent(typeof data[k] === 'object' ? JSON.stringify(data[k]) : data[k]);
   });
-  return fetch(url).then(function(r){ return r.json(); }).catch(function(){ return { ok:false, error:'Error de conexión' }; });
+  return gasRequest(url);
+}
+
+function gasRequest(url) {
+  return new Promise(function(resolve) {
+    var cbName = '_cb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+    window[cbName] = function(data) {
+      resolve(data);
+      delete window[cbName];
+      var s = document.getElementById(cbName);
+      if (s) s.parentNode.removeChild(s);
+    };
+    var script = document.createElement('script');
+    script.id = cbName;
+    script.src = url + '&callback=' + cbName;
+    script.onerror = function() {
+      resolve({ ok: false, error: 'Error de conexión' });
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    };
+    document.body.appendChild(script);
+  });
 }
 
 // ── ALERTS ───────────────────────────────────────────────
