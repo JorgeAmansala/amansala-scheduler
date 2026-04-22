@@ -675,15 +675,26 @@ function renderAddons(dias, savedAddons, includedAddons) {
 
 function collectAddons() {
   var result = [];
+  // Teacher-selected optional addons
   document.querySelectorAll('.addon-row').forEach(function(row) {
     var day = row.querySelector('.addon-day').value;
     if (!day) return;
     var id = row.dataset.addonId;
     var addon = ADDONS.find(function(a){ return a.id === id; });
+    if (!addon) return;
     result.push({
       dia: day, horaInicio: addon.time, horaFin: '',
       actividad: addon.name, shala: '', opcional: true,
       precio: addon.price, addonId: id
+    });
+  });
+  // Staff-set included addons (always save these too)
+  var included = window._includedAddons || [];
+  included.forEach(function(a) {
+    result.push({
+      dia: a.dia, horaInicio: a.time || a.timeLabel, horaFin: '',
+      actividad: a.name, shala: '', opcional: false,
+      precio: 0, addonId: a.addonId || a.id, included: true
     });
   });
   return result;
@@ -729,16 +740,17 @@ function initMaestro(id) {
     window._retiro = r;
     window._dias = dias;
     window._shalas = r['Shalas Permitidas'].split(', ');
-    window._amShala = r['AM Shala'] || '';
-    window._pmShala = r['PM Shala'] || '';
+    window._amShala = r['AM Shala'] || r['AM_Shala'] || r['amShala'] || '';
+    window._pmShala = r['PM Shala'] || r['PM_Shala'] || r['pmShala'] || '';
 
     // Parse staff-set included addons
     var includedAddons = [];
-    try { includedAddons = JSON.parse(r['Included Addons'] || '[]'); } catch(e) {}
+    var rawIncluded = r['Included Addons'] || r['Included_Addons'] || r['includedAddons'] || '[]';
+    try { includedAddons = JSON.parse(rawIncluded); } catch(e) { includedAddons = []; }
     window._includedAddons = includedAddons;
 
     // Parse staff-set offsite dinner day
-    window._staffOffsiteDay = r['Offsite Day'] || '';
+    window._staffOffsiteDay = r['Offsite Day'] || r['Offsite_Day'] || r['offsiteDay'] || '';
 
     renderAddons(dias, [], includedAddons);
     renderDaysWithMeals(dias, []);
@@ -827,14 +839,28 @@ function renderDaysWithMeals(dias, savedActivities) {
     // Inject AM/PM class shalas as locked activities if set by staff
     var staffLocked = [];
     if (amShala && idx > 0) {
-      var existing = nonMeals.find(function(a){ return (a.actividad||a['Actividad']||'').toLowerCase().indexOf('morning') !== -1 || (a.actividad||a['Actividad']||'').toLowerCase().indexOf('am class') !== -1; });
-      if (!existing) staffLocked.push({ dia: dia, horaInicio:'07:00', horaFin:'08:00', actividad:'Morning Class', shala: amShala, staffLocked: true });
-      else existing.shala = amShala;
+      var existing = nonMeals.find(function(a){
+        var n = (a.actividad||a['Actividad']||'').toLowerCase();
+        return n.indexOf('morning') !== -1 || n.indexOf('am class') !== -1;
+      });
+      if (!existing) {
+        staffLocked.push({ dia: dia, horaInicio:'07:00', horaFin:'08:00', actividad:'Morning Class', shala: amShala, staffLocked: true });
+      } else {
+        existing.shala = amShala;
+        existing.staffLocked = true;
+      }
     }
     if (pmShala && idx > 0 && idx < dias.length - 1) {
-      var existingPm = nonMeals.find(function(a){ return (a.actividad||a['Actividad']||'').toLowerCase().indexOf('afternoon') !== -1 || (a.actividad||a['Actividad']||'').toLowerCase().indexOf('pm class') !== -1; });
-      if (!existingPm) staffLocked.push({ dia: dia, horaInicio:'16:30', horaFin:'17:30', actividad:'Afternoon Class', shala: pmShala, staffLocked: true });
-      else existingPm.shala = pmShala;
+      var existingPm = nonMeals.find(function(a){
+        var n = (a.actividad||a['Actividad']||'').toLowerCase();
+        return n.indexOf('afternoon') !== -1 || n.indexOf('pm class') !== -1;
+      });
+      if (!existingPm) {
+        staffLocked.push({ dia: dia, horaInicio:'16:30', horaFin:'17:30', actividad:'Afternoon Class', shala: pmShala, staffLocked: true });
+      } else {
+        existingPm.shala = pmShala;
+        existingPm.staffLocked = true;
+      }
     }
 
     return meals.concat(staffLocked).concat(nonMeals).sort(function(a,b){
