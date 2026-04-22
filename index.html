@@ -603,14 +603,18 @@ function renderDays(dias, actividades) {
 window._offsiteDia = null; // tracks which day has the offsite dinner
 
 function addOffsiteDinner(dia) {
-  // Remove from previous day if set
+  // Remove from previous day if set — restore its Dinner
   if (window._offsiteDia && window._offsiteDia !== dia) {
     var prev = document.getElementById('offsite-' + window._offsiteDia);
     if (prev) prev.innerHTML = '';
     var prevBtn = document.getElementById('btn-offsite-' + window._offsiteDia);
     if (prevBtn) { prevBtn.textContent = '+ Offsite Dinner'; prevBtn.style.background = ''; prevBtn.style.color = ''; }
+    restoreDinner(window._offsiteDia);
   }
   window._offsiteDia = dia;
+
+  // Remove regular Dinner row from this day
+  removeDinner(dia);
 
   var cont = document.getElementById('offsite-' + dia);
   var btn = document.getElementById('btn-offsite-' + dia);
@@ -624,9 +628,36 @@ function addOffsiteDinner(dia) {
   row.innerHTML =
     '<input type="time" class="offsite-inicio" value="19:30" />' +
     '<input type="time" class="offsite-fin"    value="22:00" />' +
-    '<div class="offsite-label">Offsite Dinner <span>— no shala, not included in program</span></div>' +
+    '<div class="offsite-label">Offsite Dinner <span>— not included in program</span></div>' +
     '<button class="btn-offsite-remove" onclick="removeOffsiteDinner(\'' + dia + '\')">×</button>';
   cont.appendChild(row);
+}
+
+function removeDinner(dia) {
+  var acts = document.querySelectorAll('#acts-' + dia + ' .act-row');
+  acts.forEach(function(row) {
+    var actVal = row.querySelector('.f-act');
+    if (actVal && actVal.value.trim() === 'Dinner') {
+      row.dataset.removedDinner = 'true';
+      row.style.display = 'none';
+    }
+  });
+}
+
+function restoreDinner(dia) {
+  var acts = document.querySelectorAll('#acts-' + dia + ' .act-row');
+  var restored = false;
+  acts.forEach(function(row) {
+    if (row.dataset.removedDinner === 'true') {
+      row.style.display = '';
+      delete row.dataset.removedDinner;
+      restored = true;
+    }
+  });
+  // If no dinner row to restore (e.g. user deleted it manually), add one back
+  if (!restored) {
+    addActRow(dia, { horaInicio:'19:30', horaFin:'21:00', actividad:'Dinner', shala:'' });
+  }
 }
 
 function removeOffsiteDinner(dia) {
@@ -634,6 +665,7 @@ function removeOffsiteDinner(dia) {
   if (cont) cont.innerHTML = '';
   var btn = document.getElementById('btn-offsite-' + dia);
   if (btn) { btn.textContent = '+ Offsite Dinner'; btn.style.background = ''; btn.style.color = ''; }
+  restoreDinner(dia);
   window._offsiteDia = null;
 }
 
@@ -731,6 +763,7 @@ function collectActividades() {
   document.querySelectorAll('.day-block').forEach(function(block) {
     var dia = block.dataset.dia;
     block.querySelectorAll('.act-row').forEach(function(row) {
+      if (row.dataset.removedDinner === 'true') return; // skip hidden dinner
       var act = row.querySelector('.f-act').value.trim();
       if (!act) return;
       actividades.push({
