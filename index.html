@@ -625,14 +625,14 @@ var LAST_DAY_ACTIVITIES = [
 
 // ── ADD-ONS ───────────────────────────────────────────────
 var ADDONS = [
-  { id:'ruins',    name:'Tour Ruins',        time:'11:45', timeLabel:'11:45 AM', price:85  },
-  { id:'manglar',  name:'Tour Mangroves',    time:'11:45', timeLabel:'11:45 AM', price:85  },
-  { id:'cenote',   name:'Tour Grand Cenote', time:'11:45', timeLabel:'11:45 AM', price:85  },
-  { id:'muyil',    name:'Tour Muyil',        time:'11:45', timeLabel:'11:45 AM', price:175 },
-  { id:'sound',    name:'Sound Healing',     time:'19:15', timeLabel:'7:15 PM',  price:65  },
-  { id:'clay',     name:'Mayan Clay',        time:'14:30', timeLabel:'2:30 PM',  price:75  },
-  { id:'temazcal', name:'Temazcal',          time:'19:15', timeLabel:'7:15 PM',  price:95  },
-  { id:'icebath',  name:'Ice Bath',          time:'15:00', timeLabel:'3:00 PM',  price:65  },
+  { id:'ruins',    name:'Tour Ruins',        time:'11:45', timeEnd:'13:45', timeLabel:'11:45 AM', price:85  },
+  { id:'manglar',  name:'Tour Mangroves',    time:'11:45', timeEnd:'13:45', timeLabel:'11:45 AM', price:85  },
+  { id:'cenote',   name:'Tour Grand Cenote', time:'11:45', timeEnd:'13:45', timeLabel:'11:45 AM', price:85  },
+  { id:'muyil',    name:'Tour Muyil',        time:'11:45', timeEnd:'15:15', timeLabel:'11:45 AM', price:175 },
+  { id:'sound',    name:'Sound Healing',     time:'19:15', timeEnd:'20:15', timeLabel:'7:15 PM',  price:65  },
+  { id:'clay',     name:'Mayan Clay',        time:'14:30', timeEnd:'15:30', timeLabel:'2:30 PM',  price:75  },
+  { id:'temazcal', name:'Temazcal',          time:'19:15', timeEnd:'21:15', timeLabel:'7:15 PM',  price:95  },
+  { id:'icebath',  name:'Ice Bath',          time:'15:00', timeEnd:'15:30', timeLabel:'3:00 PM',  price:65  },
 ];
 
 function renderAddons(dias, savedAddons, includedAddons) {
@@ -694,7 +694,7 @@ function collectAddons() {
     var addon = ADDONS.find(function(a){ return a.id === id; });
     if (!addon) return;
     result.push({
-      dia: day, horaInicio: addon.time, horaFin: '',
+      dia: day, horaInicio: addon.time, horaFin: addon.timeEnd || '',
       actividad: addon.name, shala: '', opcional: true,
       precio: addon.price, addonId: id
     });
@@ -702,8 +702,10 @@ function collectAddons() {
   // Staff-set included addons (always save these too)
   var included = window._includedAddons || [];
   included.forEach(function(a) {
+    var addonDef = ADDONS.find(function(d){ return d.name === a.name; });
     result.push({
-      dia: a.dia, horaInicio: a.time || a.timeLabel, horaFin: '',
+      dia: a.dia, horaInicio: addonDef ? addonDef.time : (a.time || ''),
+      horaFin: addonDef ? addonDef.timeEnd : '',
       actividad: a.name, shala: '', opcional: false,
       precio: 0, addonId: a.addonId || a.id, included: true
     });
@@ -893,7 +895,14 @@ function renderDaysWithMeals(dias, savedActivities) {
     var includedForDay = (window._includedAddons || []).filter(function(a){
       return a.dia === dia;
     }).map(function(a){
-      return { dia: dia, horaInicio: a.time || '', horaFin: '', actividad: a.name, shala: '', staffLocked: false, includedLocked: true };
+      var addonDef = ADDONS.find(function(d){ return d.name === a.name; });
+      return {
+        dia: dia,
+        horaInicio: addonDef ? addonDef.time : (a.time || ''),
+        horaFin:    addonDef ? addonDef.timeEnd : '',
+        actividad: a.name, shala: '',
+        staffLocked: false, includedLocked: true
+      };
     });
 
     return meals.concat(staffLocked).concat(includedForDay).concat(nonMeals).sort(function(a,b){
@@ -1158,13 +1167,12 @@ function addActRow(dia, data) {
 
   // Locked meal row: no shala, no music, no delete
   } else if (includedLocked) {
-    // Included addon: locked name, no shala, no delete, shows "Included" badge
     row.style.background = 'var(--teal-lt)';
     row.style.borderRadius = 'var(--radius-sm)';
     row.style.padding = '2px 4px';
     row.innerHTML =
-      '<input type="time" class="f-inicio" value="'+(data&&(data['Hora Inicio']||data.horaInicio)||'')+'" onchange="sortDayRows(\''+dia+'\')" />' +
-      '<input type="time" class="f-fin"    value="'+(data&&(data['Hora Fin']||data.horaFin)||'')+'" />' +
+      '<input type="time" class="f-inicio" value="'+(data&&(data['Hora Inicio']||data.horaInicio)||'')+'" readonly style="background:rgba(255,255,255,0.5);color:var(--teal-dk);cursor:default;" />' +
+      '<input type="time" class="f-fin"    value="'+(data&&(data['Hora Fin']||data.horaFin)||'')+'" readonly style="background:rgba(255,255,255,0.5);color:var(--teal-dk);cursor:default;" />' +
       '<input type="text" class="f-act" value="'+actName+'" readonly style="background:rgba(255,255,255,0.5);color:var(--teal-dk);cursor:default;border-color:var(--teal-lt);" />' +
       '<div style="font-size:11px;font-weight:bold;color:var(--teal-dk);font-family:sans-serif;padding:7px 10px;">Included</div>' +
       '<div style="width:110px;"></div>' +
