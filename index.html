@@ -349,11 +349,11 @@
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding-bottom:16px;border-bottom:0.5px solid var(--border);">
       <div style="display:flex;align-items:center;gap:8px;font-family:sans-serif;font-size:13px;">
         <label style="color:var(--text-sec);font-size:12px;">From</label>
-        <input type="date" id="cal-from" style="font-size:13px;padding:6px 10px;" onchange="filterCalendario()" />
+        <input type="date" id="cal-from" style="font-size:13px;padding:6px 10px;" onchange="filterCalendario()" oninput="filterCalendario()" />
       </div>
       <div style="display:flex;align-items:center;gap:8px;font-family:sans-serif;font-size:13px;">
         <label style="color:var(--text-sec);font-size:12px;">To</label>
-        <input type="date" id="cal-to" style="font-size:13px;padding:6px 10px;" onchange="filterCalendario()" />
+        <input type="date" id="cal-to" style="font-size:13px;padding:6px 10px;" onchange="filterCalendario()" oninput="filterCalendario()" />
       </div>
       <button class="btn-secondary" style="font-size:12px;padding:6px 12px;" onclick="clearCalFilter()">Show all</button>
     </div>
@@ -1384,24 +1384,30 @@ function loadCalendario() {
 function filterCalendario() {
   var from = document.getElementById('cal-from').value;
   var to   = document.getElementById('cal-to').value;
-  var ocupadas = window._calOcupadas || [];
-  var conflictos = window._calConflictos || [];
+  var ocupadas = window._calOcupadas;
+  var conflictos = window._calConflictos;
+
+  // If data not loaded yet, trigger a load
+  if (!ocupadas) { loadCalendario(); return; }
+
+  var filtOcupadas = ocupadas.slice();
+  var filtConflictos = conflictos.slice();
 
   if (from || to) {
-    ocupadas = ocupadas.filter(function(o) {
-      var d = (o['Dia']||'').substring(0,10);
+    filtOcupadas = ocupadas.filter(function(o) {
+      var d = (o['Dia']||'').toString().substring(0,10);
       if (from && d < from) return false;
       if (to   && d > to)   return false;
       return true;
     });
-    conflictos = conflictos.filter(function(c) {
-      var d = (c.dia||'').substring(0,10);
+    filtConflictos = conflictos.filter(function(c) {
+      var d = (c.dia||'').toString().substring(0,10);
       if (from && d < from) return false;
       if (to   && d > to)   return false;
       return true;
     });
   }
-  renderCalendario(ocupadas, conflictos);
+  renderCalendario(filtOcupadas, filtConflictos);
 }
 
 function clearCalFilter() {
@@ -1411,38 +1417,30 @@ function clearCalFilter() {
 }
 
 function fmtTime(val) {
-  if (!val) return '';
-  // Handle ISO timestamps from Google Sheets (e.g. 1899-12-30T23:32:04.000Z)
-  if (val.toString().indexOf('T') !== -1) {
+  if (!val && val !== 0) return '';
+  var h, m;
+  // Number: Google Sheets serial time (fraction of day, e.g. 0.72 = 17:17)
+  if (typeof val === 'number') {
+    var totalMins = Math.round(val * 24 * 60);
+    h = Math.floor(totalMins / 60) % 24;
+    m = totalMins % 60;
+  // ISO timestamp e.g. 1899-12-30T23:32:04.000Z
+  } else if (val.toString().indexOf('T') !== -1) {
     var d = new Date(val);
-    var h = d.getUTCHours(), m = d.getUTCMinutes();
-    var ampm = h >= 12 ? 'PM' : 'AM';
-    var h12 = h % 12 || 12;
-    return h12 + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+    h = d.getUTCHours(); m = d.getUTCMinutes();
+  // HH:MM string
+  } else {
+    var parts = val.toString().split(':');
+    h = parseInt(parts[0]); m = parseInt(parts[1]||0);
   }
-  // Handle HH:MM string
-  var parts = val.toString().split(':');
-  var h = parseInt(parts[0]), m = parseInt(parts[1]||0);
   var ampm = h >= 12 ? 'PM' : 'AM';
   var h12 = h % 12 || 12;
   return h12 + ':' + String(m).padStart(2,'0') + ' ' + ampm;
 }
 
-function fmtCalDate(str) {
-  if (!str) return '';
-  // Handle ISO timestamp
-  var d = str.indexOf('T') !== -1 ? new Date(str) : new Date(str + 'T12:00:00');
-  var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  var dayName = days[str.indexOf('T') !== -1 ? d.getUTCDay() : d.getDay()];
-  var month = months[str.indexOf('T') !== -1 ? d.getUTCMonth() : d.getMonth()];
-  var date = str.indexOf('T') !== -1 ? d.getUTCDate() : d.getDate();
-  var year = str.indexOf('T') !== -1 ? d.getUTCFullYear() : d.getFullYear();
-  return dayName.toUpperCase() + ', ' + month.toUpperCase() + ' ' + date + ', ' + year;
-}
-
 function timeToMinsVal(val) {
-  if (!val) return 0;
+  if (!val && val !== 0) return 0;
+  if (typeof val === 'number') return Math.round(val * 24 * 60);
   if (val.toString().indexOf('T') !== -1) {
     var d = new Date(val);
     return d.getUTCHours() * 60 + d.getUTCMinutes();
