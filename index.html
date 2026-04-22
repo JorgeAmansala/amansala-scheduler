@@ -1449,6 +1449,21 @@ function timeToMinsVal(val) {
   return parseInt(parts[0]) * 60 + parseInt(parts[1]||0);
 }
 
+function fmtCalDate(str) {
+  if (!str) return '';
+  var d;
+  if (typeof str === 'number') {
+    d = new Date((str - 25569) * 86400 * 1000);
+  } else if (str.toString().indexOf('T') !== -1) {
+    d = new Date(str);
+  } else {
+    d = new Date(str + 'T12:00:00');
+  }
+  var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return days[d.getUTCDay()].toUpperCase() + ', ' + months[d.getUTCMonth()].toUpperCase() + ' ' + d.getUTCDate() + ', ' + d.getUTCFullYear();
+}
+
 var SHALA_ABBR = { 'Sky':'Sky', 'Beachfront':'BF', 'Heaven':'Heaven', 'Grande':'G', 'Chica':'Chica' };
 
 function renderCalendario(ocupadas, conflictos) {
