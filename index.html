@@ -762,6 +762,13 @@ function initMaestro(id) {
     window._pmShala = r['PM Shala'] || r['PM_Shala'] || r['pmShala'] || '';
     window._openingShala = r['Opening Shala'] || r['Opening_Shala'] || r['openingShala'] || '';
 
+    // Load occupancy data for real-time shala availability checks
+    if (!window._calOcupadas) {
+      api('getConflictos', {}).then(function(cr) {
+        if (cr.ok) { window._calOcupadas = cr.ocupadas || []; window._calConflictos = cr.conflictos || []; }
+      });
+    }
+
     // Parse staff-set included addons
     var includedAddons = [];
     var rawIncluded = r['Included Addons'] || r['Included_Addons'] || r['includedAddons'] || '[]';
@@ -1054,6 +1061,12 @@ var SHALA_RULES = {
   'Chica':      { min: 26, max: 45 },
 };
 
+function timeToMins(t) {
+  if (!t) return 0;
+  var parts = t.toString().split(':');
+  return parseInt(parts[0]||0) * 60 + parseInt(parts[1]||0);
+}
+
 function shalasParaPax(pax) {
   var n = parseInt(pax) || 0;
   return Object.keys(SHALA_RULES).filter(function(s) {
@@ -1067,15 +1080,18 @@ function checkShalaWarning(selectEl) {
   var row = selectEl.closest('.act-row');
   var warn = row.querySelector('.shala-warn');
   var badge = row.querySelector('.shala-pending-badge');
+  var conflict = row.querySelector('.shala-conflict');
 
   if (!shala || !pax) {
     if (warn) warn.style.display = 'none';
     if (badge) badge.style.display = 'none';
+    if (conflict) conflict.style.display = 'none';
     return;
   }
+
+  // 1. Capacity warning
   var rule = SHALA_RULES[shala];
   if (rule && (pax < rule.min || pax > rule.max)) {
-    // Warning text
     if (!warn) {
       warn = document.createElement('div');
       warn.className = 'shala-warn';
@@ -1084,7 +1100,6 @@ function checkShalaWarning(selectEl) {
     }
     warn.textContent = 'Your group size is outside the recommended capacity for ' + shala + '. You can still select it, but it is subject to review by Amansala staff.';
     warn.style.display = 'block';
-    // Pending badge — read only for teacher
     if (!badge) {
       badge = document.createElement('div');
       badge.className = 'shala-pending-badge';
@@ -1094,12 +1109,48 @@ function checkShalaWarning(selectEl) {
       row.appendChild(badge);
     }
     badge.style.display = 'flex';
-    // Store approval status on row (default pending)
     if (!row.dataset.approvalStatus) row.dataset.approvalStatus = 'pending';
   } else {
     if (warn) warn.style.display = 'none';
     if (badge) badge.style.display = 'none';
     row.dataset.approvalStatus = '';
+  }
+
+  // 2. Real-time availability check against other retreats
+  var hIni = row.querySelector('.f-inicio') ? row.querySelector('.f-inicio').value : '';
+  var hFin = row.querySelector('.f-fin') ? row.querySelector('.f-fin').value : '';
+  var dia = row.closest('.day-block') ? row.closest('.day-block').dataset.dia : '';
+
+  if (!shala || !dia || !hIni) return;
+
+  var ocupadas = window._calOcupadas || [];
+  var myRetiroId = window._retiro ? window._retiro['ID'] : '';
+  var hasConflict = ocupadas.some(function(o) {
+    if (o['Shala'] !== shala) return false;
+    if ((o['Dia']||'').toString().substring(0,10) !== dia) return false;
+    if (o['Retiro ID'] === myRetiroId) return false;
+    // Check time overlap
+    var oIni = timeToMins(o['Hora Inicio'] || '');
+    var oFin = timeToMins(o['Hora Fin'] || o['Hora Inicio'] || '');
+    var mIni = timeToMins(hIni);
+    var mFin = hFin ? timeToMins(hFin) : mIni + 60;
+    return mIni < oFin && mFin > oIni;
+  });
+
+  if (!conflict) {
+    conflict = document.createElement('div');
+    conflict.className = 'shala-conflict';
+    conflict.style.cssText = 'grid-column:1/-1;font-size:11px;background:#FCEBEB;color:#A32D2D;border-radius:4px;padding:5px 10px;font-family:sans-serif;margin-top:-2px;';
+    row.appendChild(conflict);
+  }
+  if (hasConflict) {
+    var conflicting = ocupadas.find(function(o){
+      return o['Shala'] === shala && (o['Dia']||'').toString().substring(0,10) === dia && o['Retiro ID'] !== myRetiroId;
+    });
+    conflict.textContent = '⚠ ' + shala + ' is already booked at this time' + (conflicting ? ' by ' + conflicting['Nombre Grupo'] : '') + '. Please choose a different shala or time.';
+    conflict.style.display = 'block';
+  } else {
+    conflict.style.display = 'none';
   }
 }
 
@@ -1219,6 +1270,12 @@ function addActRow(dia, data) {
 
     // Check warning on load
     if (selectedShala && showShala) checkShalaWarning(row.querySelector('.f-shala'));
+
+    // Re-check shala availability when time changes
+    row.querySelector('.f-inicio').addEventListener('change', function() {
+      var sel = row.querySelector('.f-shala');
+      if (sel && sel.value) checkShalaWarning(sel);
+    });
   }
 
   cont.appendChild(row);
