@@ -694,6 +694,8 @@ function needsShala(activityName) {
   if (!activityName) return true;
   return NO_SHALA_ACTIVITIES.indexOf(activityName.toLowerCase().trim()) === -1;
 }
+
+var SHALA_RULES = {
   'Sky':        { min: 1,  max: 7  },
   'Beachfront': { min: 8,  max: 25 },
   'Heaven':     { min: 8,  max: 25 },
