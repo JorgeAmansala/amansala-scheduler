@@ -273,30 +273,36 @@
     <!-- MEAL PLAN SELECTOR -->
     <div class="card" style="margin-bottom:20px;">
       <div class="card-title">Meal plan</div>
-      <div style="font-size:13px;color:var(--text-sec);font-family:sans-serif;margin-bottom:14px;">Choose the meal structure for your retreat. This applies to all days except the first and last.</div>
+      <div style="font-size:13px;color:var(--text-sec);font-family:sans-serif;margin-bottom:14px;">Choose the meal structure for your retreat. Applies to all days except the first and last.</div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;">
         <div id="meal-opt1" onclick="selectMealPlan(1)"
           style="flex:1;min-width:200px;border:2px solid var(--teal);border-radius:var(--radius);padding:16px 20px;cursor:pointer;background:var(--teal-lt);">
-          <div style="font-weight:bold;font-size:14px;color:var(--teal-dk);font-family:sans-serif;margin-bottom:8px;">Option 1</div>
-          <div style="font-size:13px;color:var(--teal-dk);font-family:sans-serif;line-height:1.8;">
-            Light Breakfast<br>Brunch<br>Snack<br>Dinner
+          <div class="meal-opt-title" style="font-weight:bold;font-size:14px;color:var(--teal-dk);font-family:sans-serif;margin-bottom:8px;">Option 1</div>
+          <div class="meal-opt-items" style="font-size:13px;color:var(--teal-dk);font-family:sans-serif;line-height:1.8;">
+            Light Breakfast · Brunch · Snack · Dinner
           </div>
         </div>
         <div id="meal-opt2" onclick="selectMealPlan(2)"
           style="flex:1;min-width:200px;border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;cursor:pointer;background:white;">
-          <div style="font-weight:bold;font-size:14px;color:var(--text-sec);font-family:sans-serif;margin-bottom:8px;">Option 2</div>
-          <div style="font-size:13px;color:var(--text-sec);font-family:sans-serif;line-height:1.8;">
-            Breakfast<br>Lunch<br>Dinner
+          <div class="meal-opt-title" style="font-weight:bold;font-size:14px;color:var(--text-sec);font-family:sans-serif;margin-bottom:8px;">Option 2</div>
+          <div class="meal-opt-items" style="font-size:13px;color:var(--text-sec);font-family:sans-serif;line-height:1.8;">
+            Breakfast · Lunch · Dinner
           </div>
         </div>
       </div>
     </div>
-    <div class="card addons-section">
-      <div class="card-title">Optional Add-ons — select a day for each activity you want to include</div>
-      <div style="display:grid; grid-template-columns: 1fr 80px 70px 160px; gap:10px; font-size:11px; color:var(--text-sec); font-family:sans-serif; padding:0 14px; margin-bottom:6px;">
-        <span>Activity</span><span>Time</span><span>Price</span><span>Day</span>
+
+    <!-- OPTIONAL ADD-ONS: collapsible -->
+    <div class="card addons-section" style="margin-bottom:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleAddons()">
+        <div class="card-title" style="margin-bottom:0;">Optional Add-ons</div>
+        <div id="addons-summary" style="font-size:12px;color:var(--text-sec);font-family:sans-serif;"></div>
+        <span id="addons-chevron" style="font-size:18px;color:var(--text-sec);margin-left:12px;">▾</span>
       </div>
-      <div id="addons-container"></div>
+      <div id="addons-body" style="display:none;margin-top:14px;">
+        <div style="font-size:12px;color:var(--text-sec);font-family:sans-serif;margin-bottom:10px;">Select a day for each activity you want to include. Price and time are fixed.</div>
+        <div id="addons-container"></div>
+      </div>
     </div>
     <div id="days-container"></div>
     <div class="submit-bar">
@@ -454,22 +460,47 @@ var LAST_DAY_MEALS_OPT2 = [
   { horaInicio:'08:00', horaFin:'09:00', actividad:'Breakfast' },
 ];
 
+function toggleAddons() {
+  var body = document.getElementById('addons-body');
+  var chev = document.getElementById('addons-chevron');
+  var open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  chev.textContent = open ? '▴' : '▾';
+}
+
+function updateAddonSummary() {
+  var selected = [];
+  document.querySelectorAll('.addon-row').forEach(function(row) {
+    var day = row.querySelector('.addon-day').value;
+    if (day) {
+      var id = row.dataset.addonId;
+      var addon = ADDONS.find(function(a){ return a.id === id; });
+      if (addon) selected.push(addon.name);
+    }
+  });
+  var el = document.getElementById('addons-summary');
+  if (el) el.textContent = selected.length > 0 ? selected.length + ' selected' : 'none selected';
+}
+
 function selectMealPlan(opt) {
   MEAL_PLAN = opt;
   var o1 = document.getElementById('meal-opt1');
   var o2 = document.getElementById('meal-opt2');
   if (opt === 1) {
     o1.style.border = '2px solid var(--teal)'; o1.style.background = 'var(--teal-lt)';
-    o1.querySelector('div').style.color = 'var(--teal-dk)';
+    o1.querySelector('.meal-opt-title').style.color = 'var(--teal-dk)';
+    o1.querySelector('.meal-opt-items').style.color = 'var(--teal-dk)';
     o2.style.border = '1px solid var(--border)'; o2.style.background = 'white';
-    o2.querySelector('div').style.color = 'var(--text-sec)';
+    o2.querySelector('.meal-opt-title').style.color = 'var(--text-sec)';
+    o2.querySelector('.meal-opt-items').style.color = 'var(--text-sec)';
   } else {
     o2.style.border = '2px solid var(--teal)'; o2.style.background = 'var(--teal-lt)';
-    o2.querySelector('div').style.color = 'var(--teal-dk)';
+    o2.querySelector('.meal-opt-title').style.color = 'var(--teal-dk)';
+    o2.querySelector('.meal-opt-items').style.color = 'var(--teal-dk)';
     o1.style.border = '1px solid var(--border)'; o1.style.background = 'white';
-    o1.querySelector('div').style.color = 'var(--text-sec)';
+    o1.querySelector('.meal-opt-title').style.color = 'var(--text-sec)';
+    o1.querySelector('.meal-opt-items').style.color = 'var(--text-sec)';
   }
-  // Re-render days with new meal plan
   if (window._dias) renderDaysWithMeals(window._dias, window._lastSavedActivities || []);
 }
 
@@ -527,7 +558,7 @@ function renderAddons(dias, savedAddons) {
       '<div class="addon-name">' + addon.name + '</div>' +
       '<div class="addon-time">' + addon.timeLabel + '</div>' +
       '<div class="addon-price">$' + addon.price + '</div>' +
-      '<select class="addon-day">' + opts + '</select>';
+      '<select class="addon-day" onchange="updateAddonSummary()">' + opts + '</select>';
     cont.appendChild(row);
   });
 }
