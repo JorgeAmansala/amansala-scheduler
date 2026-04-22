@@ -274,7 +274,7 @@
     <div class="card" style="margin-bottom:20px;">
       <div class="card-title">Meal plan</div>
       <div style="font-size:13px;color:var(--text-sec);font-family:sans-serif;margin-bottom:14px;">Choose the meal structure for your retreat.</div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
         <div id="meal-opt1" onclick="selectMealPlan(1)"
           style="flex:1;min-width:200px;border:2px solid var(--teal);border-radius:var(--radius);padding:16px 20px;cursor:pointer;background:var(--teal-lt);">
           <div class="meal-opt-title" style="font-weight:bold;font-size:14px;color:var(--teal-dk);font-family:sans-serif;margin-bottom:8px;">Option 1</div>
@@ -288,6 +288,16 @@
           <div class="meal-opt-items" style="font-size:13px;color:var(--text-sec);font-family:sans-serif;line-height:1.8;">
             Breakfast · Lunch · Dinner
           </div>
+        </div>
+      </div>
+      <!-- Offsite Dinner moved here -->
+      <div style="border-top:0.5px solid var(--border);padding-top:14px;">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div style="font-size:13px;font-family:sans-serif;color:var(--text);font-weight:bold;">Offsite Dinner</div>
+          <select id="offsite-day-select" onchange="handleOffsiteDaySelect(this.value)" style="font-size:13px;padding:6px 10px;min-width:200px;">
+            <option value="">— Not included —</option>
+          </select>
+          <div style="font-size:12px;color:var(--text-sec);font-family:sans-serif;">Regular dinner will be removed from the selected day.</div>
         </div>
       </div>
     </div>
@@ -365,6 +375,8 @@
   <div id="alert-nuevo" class="alert"></div>
   <div class="card">
     <div class="card-title">Register new retreat</div>
+
+    <!-- Basic info -->
     <div class="form-grid">
       <div class="form-group">
         <label>Group / teacher name</label>
@@ -380,7 +392,7 @@
       </div>
       <div class="form-group">
         <label>End date</label>
-        <input type="date" id="n-fin" />
+        <input type="date" id="n-fin" onchange="updateStaffFormDays()" />
       </div>
       <div class="form-group">
         <label>Number of guests (pax)</label>
@@ -390,9 +402,56 @@
         <div class="pax-hint hint-grande" id="hint-grande">Large group (26–45 pax) — Shalas: <strong>Grande</strong> or <strong>Chica</strong> (teacher chooses)</div>
       </div>
     </div>
-    <div style="margin-top:8px;">
-      <button class="btn-primary" onclick="crearRetiro()">Create retreat & send link to teacher</button>
+
+    <!-- AM / PM Class shalas -->
+    <div style="border-top:0.5px solid var(--border);padding-top:16px;margin-top:8px;margin-bottom:16px;">
+      <div class="card-title" style="margin-bottom:12px;">Class shalas <span style="font-weight:normal;text-transform:none;font-size:11px;color:var(--text-sec);letter-spacing:0;">(optional — locked for teacher)</span></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>AM Class shala</label>
+          <select id="n-am-shala">
+            <option value="">— not assigned —</option>
+            <option value="Sky">Sky</option>
+            <option value="Beachfront">Beachfront</option>
+            <option value="Heaven">Heaven</option>
+            <option value="Grande">Grande</option>
+            <option value="Chica">Chica</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>PM Class shala</label>
+          <select id="n-pm-shala">
+            <option value="">— not assigned —</option>
+            <option value="Sky">Sky</option>
+            <option value="Beachfront">Beachfront</option>
+            <option value="Heaven">Heaven</option>
+            <option value="Grande">Grande</option>
+            <option value="Chica">Chica</option>
+          </select>
+        </div>
+      </div>
     </div>
+
+    <!-- Included activities -->
+    <div style="border-top:0.5px solid var(--border);padding-top:16px;margin-bottom:16px;">
+      <div class="card-title" style="margin-bottom:4px;">Included activities <span style="font-weight:normal;text-transform:none;font-size:11px;color:var(--text-sec);letter-spacing:0;">(optional — appear locked in teacher form)</span></div>
+      <div style="font-size:12px;color:var(--text-sec);font-family:sans-serif;margin-bottom:12px;">Select which add-ons are included for this retreat. Teacher cannot modify these.</div>
+      <div id="n-included-addons" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"></div>
+    </div>
+
+    <!-- Offsite Dinner -->
+    <div style="border-top:0.5px solid var(--border);padding-top:16px;margin-bottom:20px;">
+      <div class="card-title" style="margin-bottom:12px;">Offsite Dinner <span style="font-weight:normal;text-transform:none;font-size:11px;color:var(--text-sec);letter-spacing:0;">(optional)</span></div>
+      <div class="form-group" style="max-width:300px;">
+        <label>Select day</label>
+        <select id="n-offsite-day">
+          <option value="">— not included —</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="crearRetiro()">Create retreat & send link to teacher</button>
+
     <div id="link-generado" style="display:none; margin-top:16px; padding:14px; background:var(--teal-lt); border-radius:var(--radius-sm); font-family:sans-serif; font-size:13px;">
       <div style="color:var(--teal-dk);font-weight:bold;margin-bottom:6px;">✓ Retreat created. Link sent to teacher.</div>
       <div style="color:var(--text-sec);">Form link:</div>
@@ -472,6 +531,31 @@ var LAST_DAY_MEALS_OPT2 = [
   { horaInicio:'08:00', horaFin:'09:00', actividad:'Breakfast' },
 ];
 
+function handleOffsiteDaySelect(dia) {
+  // Remove previous offsite dinner
+  if (window._offsiteDia && window._offsiteDia !== dia) {
+    var prev = document.getElementById('offsite-' + window._offsiteDia);
+    if (prev) prev.innerHTML = '';
+    restoreDinner(window._offsiteDia);
+    window._offsiteDia = null;
+  }
+  if (!dia) { window._offsiteDia = null; return; }
+  addOffsiteDinner(dia);
+}
+
+function populateOffsiteDayDropdown(dias) {
+  var el = document.getElementById('offsite-day-select');
+  if (!el) return;
+  var cur = el.value;
+  el.innerHTML = '<option value="">— Not included —</option>' +
+    dias.map(function(d) {
+      var dt = new Date(d);
+      return '<option value="'+d+'"'+(cur===d?' selected':'')+'>'+DAY_NAMES[dt.getDay()]+', '+MONTH_NAMES[dt.getUTCMonth()]+' '+dt.getUTCDate()+'</option>';
+    }).join('');
+  // Pre-select staff-set offsite day
+  if (window._staffOffsiteDay) el.value = window._staffOffsiteDay;
+}
+
 function toggleAddons() {
   var body = document.getElementById('addons-body');
   var chev = document.getElementById('addons-chevron');
@@ -550,16 +634,39 @@ var ADDONS = [
   { id:'icebath',  name:'Ice Bath',          time:'15:00', timeLabel:'3:00 PM',  price:65  },
 ];
 
-function renderAddons(dias, savedAddons) {
+function renderAddons(dias, savedAddons, includedAddons) {
   var cont = document.getElementById('addons-container');
   cont.innerHTML = '';
+  includedAddons = includedAddons || window._includedAddons || [];
+  var includedNames = includedAddons.map(function(a){ return a.name; });
+
+  // Show included addons (locked, from staff) first
+  if (includedAddons.length > 0) {
+    var incDiv = document.createElement('div');
+    incDiv.style.cssText = 'margin-bottom:12px;';
+    incDiv.innerHTML = '<div style="font-size:11px;font-weight:bold;color:var(--teal-dk);font-family:sans-serif;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">Included by Amansala</div>' +
+      includedAddons.map(function(a) {
+        var dt = new Date(a.dia);
+        var dayLabel = DAY_NAMES[dt.getDay()] + ', ' + MONTH_NAMES[dt.getUTCMonth()] + ' ' + dt.getUTCDate();
+        return '<div style="display:grid;grid-template-columns:1fr 80px 80px 160px;gap:10px;align-items:center;padding:8px 12px;background:var(--teal-lt);border-radius:var(--radius-sm);margin-bottom:6px;font-family:sans-serif;">' +
+          '<div style="font-size:13px;font-weight:bold;color:var(--teal-dk);">'+a.name+'</div>' +
+          '<div style="font-size:12px;color:var(--teal-dk);">'+a.timeLabel+'</div>' +
+          '<div style="font-size:12px;font-weight:bold;color:var(--teal-dk);">Included</div>' +
+          '<div style="font-size:12px;color:var(--teal-dk);">'+dayLabel+'</div>' +
+          '</div>';
+      }).join('');
+    cont.appendChild(incDiv);
+  }
+
+  // Optional addons teacher can choose — exclude already included
   var dayOpts = '<option value="">— Not included —</option>' +
     dias.map(function(d) {
       var dt = new Date(d);
       return '<option value="'+d+'">' + DAY_NAMES[dt.getDay()] + ', ' + MONTH_NAMES[dt.getUTCMonth()] + ' ' + dt.getUTCDate() + '</option>';
     }).join('');
 
-  ADDONS.forEach(function(addon) {
+  var optionalAddons = ADDONS.filter(function(a){ return includedNames.indexOf(a.name) === -1; });
+  optionalAddons.forEach(function(addon) {
     var saved = savedAddons ? savedAddons.find(function(s){ return s.addonId === addon.id || s['Actividad'] === addon.name; }) : null;
     var selectedDay = saved ? (saved.dia || saved['Dia']) : '';
     var row = document.createElement('div');
@@ -573,6 +680,7 @@ function renderAddons(dias, savedAddons) {
       '<select class="addon-day" onchange="updateAddonSummary()">' + opts + '</select>';
     cont.appendChild(row);
   });
+  updateAddonSummary();
 }
 
 function collectAddons() {
@@ -631,10 +739,25 @@ function initMaestro(id) {
     window._retiro = r;
     window._dias = dias;
     window._shalas = r['Shalas Permitidas'].split(', ');
+    window._amShala = r['AM Shala'] || '';
+    window._pmShala = r['PM Shala'] || '';
 
-    renderAddons(dias, []);
+    // Parse staff-set included addons
+    var includedAddons = [];
+    try { includedAddons = JSON.parse(r['Included Addons'] || '[]'); } catch(e) {}
+    window._includedAddons = includedAddons;
+
+    // Parse staff-set offsite dinner day
+    window._staffOffsiteDay = r['Offsite Day'] || '';
+
+    renderAddons(dias, [], includedAddons);
     renderDaysWithMeals(dias, []);
     document.getElementById('schedule-form').style.display = 'block';
+
+    // Apply staff-set offsite dinner
+    if (window._staffOffsiteDay) {
+      addOffsiteDinner(window._staffOffsiteDay);
+    }
 
     // If existing saved activities, override the defaults
     api('getActividades', { retiroId: id }).then(function(ar) {
@@ -645,8 +768,8 @@ function initMaestro(id) {
         var savedRegular = ar.actividades.filter(function(a){
           return addonIds.indexOf(a['Actividad']) === -1 && (a['Actividad']||a.actividad) !== 'Offsite Dinner';
         });
-        window._lastSavedActivities = savedRegular;
-        renderAddons(dias, savedAddons);
+        window._lastSavedActividades = savedRegular;
+        renderAddons(dias, savedAddons, includedAddons);
         renderDaysWithMeals(dias, savedRegular);
         if (savedOffsite) {
           var offDia = savedOffsite['Dia'] || savedOffsite.dia;
@@ -656,6 +779,8 @@ function initMaestro(id) {
             cont.querySelector('.offsite-inicio').value = savedOffsite['Hora Inicio'] || savedOffsite.horaInicio || '19:30';
             cont.querySelector('.offsite-fin').value = savedOffsite['Hora Fin'] || savedOffsite.horaFin || '22:00';
           }
+        } else if (window._staffOffsiteDay) {
+          addOffsiteDinner(window._staffOffsiteDay);
         }
         showAlert('alert-maestro', 'warn', 'You already have a saved schedule. You can edit it until ' + fmtDateShort(r['Fecha Limite Edicion']) + '.');
       }
@@ -683,11 +808,13 @@ function timeVal(t) {
 
 function renderDaysWithMeals(dias, savedActivities) {
   window._dias = dias;
-  // For each day: merge meals (locked) + saved/default activities, sorted by time
+  populateOffsiteDayDropdown(dias);
+
+  var amShala = window._amShala || '';
+  var pmShala = window._pmShala || '';
+
   var allActs = dias.map(function(dia, idx) {
-    // Meals for this day
     var meals = getMealsForDay(idx, dias.length).map(function(m) {
-      // If saved, use saved time; otherwise default
       var saved = savedActivities.find(function(s){
         return (s['Dia']||s.dia) === dia && (s['Actividad']||s.actividad) === m.actividad;
       });
@@ -697,25 +824,34 @@ function renderDaysWithMeals(dias, savedActivities) {
       });
     });
 
-    // Non-meal activities for this day (default or saved)
     var mealNames = meals.map(function(m){ return m.actividad.toLowerCase(); });
     var nonMeals = savedActivities.filter(function(s){
       return (s['Dia']||s.dia) === dia && mealNames.indexOf((s['Actividad']||s.actividad||'').toLowerCase()) === -1;
     });
 
-    // If no saved non-meals, use defaults
     if (nonMeals.length === 0) {
       var defActs = idx === 0 ? FIRST_DAY_ACTIVITIES : idx === dias.length-1 ? LAST_DAY_ACTIVITIES : DEFAULT_ACTIVITIES;
       nonMeals = defActs.map(function(a){ return Object.assign({}, a, { dia: dia }); });
     }
 
-    // Merge and sort by time
-    return meals.concat(nonMeals).sort(function(a,b){
+    // Inject AM/PM class shalas as locked activities if set by staff
+    var staffLocked = [];
+    if (amShala && idx > 0) {
+      var existing = nonMeals.find(function(a){ return (a.actividad||a['Actividad']||'').toLowerCase().indexOf('morning') !== -1 || (a.actividad||a['Actividad']||'').toLowerCase().indexOf('am class') !== -1; });
+      if (!existing) staffLocked.push({ dia: dia, horaInicio:'07:00', horaFin:'08:00', actividad:'Morning Class', shala: amShala, staffLocked: true });
+      else existing.shala = amShala;
+    }
+    if (pmShala && idx > 0 && idx < dias.length - 1) {
+      var existingPm = nonMeals.find(function(a){ return (a.actividad||a['Actividad']||'').toLowerCase().indexOf('afternoon') !== -1 || (a.actividad||a['Actividad']||'').toLowerCase().indexOf('pm class') !== -1; });
+      if (!existingPm) staffLocked.push({ dia: dia, horaInicio:'16:30', horaFin:'17:30', actividad:'Afternoon Class', shala: pmShala, staffLocked: true });
+      else existingPm.shala = pmShala;
+    }
+
+    return meals.concat(staffLocked).concat(nonMeals).sort(function(a,b){
       return timeVal(a.horaInicio||a['Hora Inicio']) - timeVal(b.horaInicio||b['Hora Inicio']);
     });
   });
 
-  // Flatten and render
   var flat = allActs.reduce(function(acc,v){ return acc.concat(v); }, []);
   renderDays(dias, flat);
 }
@@ -733,10 +869,8 @@ function renderDays(dias, actividades) {
     block.dataset.dia = dia;
     block.innerHTML =
       '<div class="day-header"><span class="day-name">' + label + '</span>' +
-      '<div style="display:flex;gap:6px;">' +
-      '<button class="btn-add btn-offsite" onclick="addOffsiteDinner(\'' + dia + '\')" id="btn-offsite-' + dia + '">+ Offsite Dinner</button>' +
       '<button class="btn-add" onclick="addActRow(\'' + dia + '\')">+ Add activity</button>' +
-      '</div></div>' +
+      '</div>' +
       '<div class="act-cols"><span>Start</span><span>End</span><span>Activity</span>' +
       '<span>Shala</span><span>Class music volume</span><span></span></div>' +
       '<div class="acts" id="acts-' + dia + '"></div>' +
@@ -755,25 +889,16 @@ function renderDays(dias, actividades) {
 window._offsiteDia = null; // tracks which day has the offsite dinner
 
 function addOffsiteDinner(dia) {
-  // Remove from previous day if set — restore its Dinner
   if (window._offsiteDia && window._offsiteDia !== dia) {
     var prev = document.getElementById('offsite-' + window._offsiteDia);
     if (prev) prev.innerHTML = '';
-    var prevBtn = document.getElementById('btn-offsite-' + window._offsiteDia);
-    if (prevBtn) { prevBtn.textContent = '+ Offsite Dinner'; prevBtn.style.background = ''; prevBtn.style.color = ''; }
     restoreDinner(window._offsiteDia);
   }
   window._offsiteDia = dia;
-
-  // Remove regular Dinner row from this day
   removeDinner(dia);
 
   var cont = document.getElementById('offsite-' + dia);
-  var btn = document.getElementById('btn-offsite-' + dia);
-  btn.textContent = '✓ Offsite Dinner set';
-  btn.style.background = '#FBEAF0';
-  btn.style.color = 'var(--pink-dk)';
-
+  if (!cont) return;
   cont.innerHTML = '';
   var row = document.createElement('div');
   row.className = 'offsite-row';
@@ -815,8 +940,9 @@ function restoreDinner(dia) {
 function removeOffsiteDinner(dia) {
   var cont = document.getElementById('offsite-' + dia);
   if (cont) cont.innerHTML = '';
-  var btn = document.getElementById('btn-offsite-' + dia);
-  if (btn) { btn.textContent = '+ Offsite Dinner'; btn.style.background = ''; btn.style.color = ''; }
+  // Reset the dropdown in meal plan card
+  var sel = document.getElementById('offsite-day-select');
+  if (sel) sel.value = '';
   restoreDinner(dia);
   window._offsiteDia = null;
 }
@@ -946,6 +1072,7 @@ function addActRow(dia, data) {
   var selectedShala = data ? (data.shala || data['Shala'] || '') : '';
   var actName = data ? (data.actividad || data['Actividad'] || '') : '';
   var showShala = needsShala(actName);
+  var staffLocked = data ? (data.staffLocked === true) : false;
   var locked = isLocked(actName);
 
   var recOpts = recommended.map(function(s) {
@@ -963,8 +1090,24 @@ function addActRow(dia, data) {
   row.className = 'act-row';
   row.style.flexWrap = 'wrap';
 
+  // Staff-locked: shala pre-set, teacher can edit time and music but not shala
+  if (staffLocked) {
+    var musicVal = data ? (data.music || data['Music'] || '') : '';
+    row.innerHTML =
+      '<input type="time" class="f-inicio" value="'+(data&&(data['Hora Inicio']||data.horaInicio)||'')+'" onchange="sortDayRows(\''+dia+'\')" />' +
+      '<input type="time" class="f-fin"    value="'+(data&&(data['Hora Fin']||data.horaFin)||'')+'" />' +
+      '<input type="text" class="f-act" value="'+actName+'" readonly style="background:var(--gray-lt);color:var(--text-sec);cursor:default;border-color:var(--border);" />' +
+      '<div style="padding:7px 10px;background:var(--teal-lt);border-radius:var(--radius-sm);font-size:13px;color:var(--teal-dk);font-family:sans-serif;">'+selectedShala+' <span style="font-size:10px;opacity:0.7;">— set by staff</span></div>' +
+      '<select class="f-music" onchange="checkMusicLoud(this)">' +
+        '<option value="">— volume —</option>' +
+        '<option value="Regular"'+(musicVal==='Regular'?' selected':'')+'>Regular</option>' +
+        '<option value="Loud"'+(musicVal==='Loud'?' selected':'')+'>Loud</option>' +
+      '</select>' +
+      '<div style="width:32px;"></div>';
+    if (musicVal === 'Loud') setTimeout(function(){ checkMusicLoud(row.querySelector('.f-music')); }, 0);
+
   // Locked meal row: no shala, no music, no delete
-  if (locked) {
+  } else if (locked) {
     row.innerHTML =
       '<input type="time" class="f-inicio" value="'+(data&&(data['Hora Inicio']||data.horaInicio)||'')+'" onchange="sortDayRows(\''+dia+'\')" />' +
       '<input type="time" class="f-fin"    value="'+(data&&(data['Hora Fin']||data.horaFin)||'')+'" />' +
@@ -1323,12 +1466,53 @@ function renderCalendario(ocupadas, conflictos) {
 function autoFillEndDate(startVal) {
   if (!startVal) return;
   var d = new Date(startVal);
-  d.setDate(d.getDate() + 4); // default: 5-day retreat
+  d.setDate(d.getDate() + 4);
   var y = d.getFullYear();
   var m = String(d.getMonth()+1).padStart(2,'0');
   var day = String(d.getDate()).padStart(2,'0');
   document.getElementById('n-fin').value = y+'-'+m+'-'+day;
   document.getElementById('n-fin').min = startVal;
+  updateStaffFormDays();
+}
+
+function updateStaffFormDays() {
+  var inicio = document.getElementById('n-inicio').value;
+  var fin    = document.getElementById('n-fin').value;
+  if (!inicio || !fin) return;
+  var dias = getDiasBetween(inicio, fin);
+
+  // Update offsite dinner day selector
+  var offEl = document.getElementById('n-offsite-day');
+  if (offEl) {
+    var prevVal = offEl.value;
+    offEl.innerHTML = '<option value="">— not included —</option>' +
+      dias.map(function(d) {
+        var dt = new Date(d);
+        return '<option value="'+d+'"'+(prevVal===d?' selected':'')+'>'+DAY_NAMES[dt.getDay()+1>6?0:dt.getDay()]+', '+MONTH_NAMES[dt.getUTCMonth()]+' '+dt.getUTCDate()+'</option>';
+      }).join('');
+  }
+
+  // Build included addons grid
+  var cont = document.getElementById('n-included-addons');
+  if (!cont) return;
+  // Preserve existing selections
+  var existing = {};
+  cont.querySelectorAll('.included-addon-row').forEach(function(row) {
+    existing[row.dataset.addonId] = row.querySelector('select').value;
+  });
+  cont.innerHTML = ADDONS.map(function(addon) {
+    var prevDay = existing[addon.id] || '';
+    var dayOpts = '<option value="">— not included —</option>' +
+      dias.map(function(d) {
+        var dt = new Date(d);
+        return '<option value="'+d+'"'+(prevDay===d?' selected':'')+'>'+DAY_NAMES[dt.getDay()]+', '+MONTH_NAMES[dt.getUTCMonth()]+' '+dt.getUTCDate()+'</option>';
+      }).join('');
+    return '<div class="included-addon-row" data-addon-id="'+addon.id+'" style="display:flex;flex-direction:column;gap:4px;padding:8px 10px;background:var(--teal-lt);border-radius:var(--radius-sm);font-family:sans-serif;">' +
+      '<div style="font-size:12px;font-weight:bold;color:var(--teal-dk);">'+addon.name+'</div>' +
+      '<div style="font-size:11px;color:var(--teal-dk);opacity:0.7;">'+addon.timeLabel+'</div>' +
+      '<select style="font-size:12px;padding:5px 8px;">'+dayOpts+'</select>' +
+      '</div>';
+  }).join('');
 }
 
 function crearRetiro() {
@@ -1342,7 +1526,30 @@ function crearRetiro() {
     showAlert('alert-nuevo', 'error', 'Please fill in all fields before continuing.');
     return;
   }
-  api_post('crearRetiro', { nombre, emailMaestro: email, fechaInicio: inicio, fechaFin: fin, pax }).then(function(res) {
+
+  // Collect AM/PM shalas
+  var amShala = document.getElementById('n-am-shala').value;
+  var pmShala = document.getElementById('n-pm-shala').value;
+
+  // Collect offsite dinner day
+  var offsiteDay = document.getElementById('n-offsite-day').value;
+
+  // Collect included addons
+  var includedAddons = [];
+  document.querySelectorAll('.included-addon-row').forEach(function(row) {
+    var day = row.querySelector('select').value;
+    if (!day) return;
+    var id = row.dataset.addonId;
+    var addon = ADDONS.find(function(a){ return a.id === id; });
+    if (addon) includedAddons.push({ addonId: id, name: addon.name, time: addon.time, timeLabel: addon.timeLabel, dia: day });
+  });
+
+  api_post('crearRetiro', {
+    nombre: nombre, emailMaestro: email, fechaInicio: inicio, fechaFin: fin, pax: pax,
+    amShala: amShala, pmShala: pmShala,
+    offsiteDay: offsiteDay,
+    includedAddons: JSON.stringify(includedAddons)
+  }).then(function(res) {
     if (!res.ok) { showAlert('alert-nuevo', 'error', res.error || 'Error creating retreat.'); return; }
     document.getElementById('link-generado').style.display = 'block';
     document.getElementById('link-url').textContent = res.link;
