@@ -1026,7 +1026,7 @@ function enviarSchedule() {
       msg += ' Note: ' + res.conflictos.length + ' shala conflict(s) detected. Amansala staff will contact you.';
     }
     showAlert('alert-maestro', 'success', msg);
-    document.querySelector('.submit-bar .btns').innerHTML = '<span style="color:var(--teal);font-size:13px;font-family:sans-serif;">✓ Submitted</span>';
+    document.getElementById('submit-hint').textContent = 'Last saved: ' + new Date().toLocaleTimeString();
   });
 }
 
