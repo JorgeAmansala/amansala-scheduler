@@ -290,16 +290,7 @@
           </div>
         </div>
       </div>
-      <!-- Offsite Dinner moved here -->
-      <div style="border-top:0.5px solid var(--border);padding-top:14px;">
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-          <div style="font-size:13px;font-family:sans-serif;color:var(--text);font-weight:bold;">Offsite Dinner</div>
-          <select id="offsite-day-select" onchange="handleOffsiteDaySelect(this.value)" style="font-size:13px;padding:6px 10px;min-width:200px;">
-            <option value="">— Not included —</option>
-          </select>
-          <div style="font-size:12px;color:var(--text-sec);font-family:sans-serif;">Regular dinner will be removed from the selected day.</div>
-        </div>
-      </div>
+      <!-- Offsite Dinner moved back to schedule section -->
     </div>
 
     <!-- OPTIONAL ADD-ONS: collapsible -->
@@ -312,6 +303,16 @@
       <div id="addons-body" style="display:none;margin-top:14px;">
         <div style="font-size:12px;color:var(--text-sec);font-family:sans-serif;margin-bottom:10px;">Select a day for each activity you want to include. Price and time are fixed.</div>
         <div id="addons-container"></div>
+      </div>
+    </div>
+    <!-- OFFSITE DINNER -->
+    <div class="card" style="margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="font-size:13px;font-family:sans-serif;color:var(--text);font-weight:bold;">Offsite Dinner</div>
+        <select id="offsite-day-select" onchange="handleOffsiteDaySelect(this.value)" style="font-size:13px;padding:6px 10px;min-width:200px;">
+          <option value="">— Not included —</option>
+        </select>
+        <div style="font-size:12px;color:var(--text-sec);font-family:sans-serif;">Regular dinner will be removed from the selected day.</div>
       </div>
     </div>
     <div id="days-container"></div>
@@ -408,7 +409,7 @@
       <div class="card-title" style="margin-bottom:12px;">Class shalas <span style="font-weight:normal;text-transform:none;font-size:11px;color:var(--text-sec);letter-spacing:0;">(optional — locked for teacher)</span></div>
       <div class="form-grid">
         <div class="form-group">
-          <label>AM Class shala</label>
+          <label>AM Class</label>
           <select id="n-am-shala">
             <option value="">— not assigned —</option>
             <option value="Sky">Sky</option>
@@ -419,7 +420,7 @@
           </select>
         </div>
         <div class="form-group">
-          <label>PM Class shala</label>
+          <label>PM Class</label>
           <select id="n-pm-shala">
             <option value="">— not assigned —</option>
             <option value="Sky">Sky</option>
@@ -437,17 +438,6 @@
       <div class="card-title" style="margin-bottom:4px;">Included activities <span style="font-weight:normal;text-transform:none;font-size:11px;color:var(--text-sec);letter-spacing:0;">(optional — appear locked in teacher form)</span></div>
       <div style="font-size:12px;color:var(--text-sec);font-family:sans-serif;margin-bottom:12px;">Select which add-ons are included for this retreat. Teacher cannot modify these.</div>
       <div id="n-included-addons" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"></div>
-    </div>
-
-    <!-- Offsite Dinner -->
-    <div style="border-top:0.5px solid var(--border);padding-top:16px;margin-bottom:20px;">
-      <div class="card-title" style="margin-bottom:12px;">Offsite Dinner <span style="font-weight:normal;text-transform:none;font-size:11px;color:var(--text-sec);letter-spacing:0;">(optional)</span></div>
-      <div class="form-group" style="max-width:300px;">
-        <label>Select day</label>
-        <select id="n-offsite-day">
-          <option value="">— not included —</option>
-        </select>
-      </div>
     </div>
 
     <button class="btn-primary" onclick="crearRetiro()">Create retreat & send link to teacher</button>
@@ -1547,7 +1537,7 @@ function crearRetiro() {
   api_post('crearRetiro', {
     nombre: nombre, emailMaestro: email, fechaInicio: inicio, fechaFin: fin, pax: pax,
     amShala: amShala, pmShala: pmShala,
-    offsiteDay: offsiteDay,
+    offsiteDay: '',
     includedAddons: JSON.stringify(includedAddons)
   }).then(function(res) {
     if (!res.ok) { showAlert('alert-nuevo', 'error', res.error || 'Error creating retreat.'); return; }
