@@ -334,6 +334,18 @@
 ════════════════════════════════════════════ -->
 <div class="main panel" id="panel-calendario" style="display:none;">
   <div class="card">
+    <!-- Date range picker -->
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding-bottom:16px;border-bottom:0.5px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:8px;font-family:sans-serif;font-size:13px;">
+        <label style="color:var(--text-sec);font-size:12px;">From</label>
+        <input type="date" id="cal-from" style="font-size:13px;padding:6px 10px;" onchange="filterCalendario()" />
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;font-family:sans-serif;font-size:13px;">
+        <label style="color:var(--text-sec);font-size:12px;">To</label>
+        <input type="date" id="cal-to" style="font-size:13px;padding:6px 10px;" onchange="filterCalendario()" />
+      </div>
+      <button class="btn-secondary" style="font-size:12px;padding:6px 12px;" onclick="clearCalFilter()">Show all</button>
+    </div>
     <div class="cal-toolbar">
       <div class="cal-legend" id="cal-legend"></div>
       <div style="display:flex;align-items:center;gap:10px;">
@@ -1076,8 +1088,39 @@ function loadCalendario() {
   document.getElementById('refresh-countdown') && (document.getElementById('refresh-countdown').textContent = '↺ 60s');
   api('getConflictos', {}).then(function(res) {
     if (!res.ok) { document.getElementById('cal-wrap').innerHTML = '<div class="loader">Error loading data.</div>'; return; }
-    renderCalendario(res.ocupadas || [], res.conflictos || []);
+    window._calOcupadas = res.ocupadas || [];
+    window._calConflictos = res.conflictos || [];
+    filterCalendario();
   });
+}
+
+function filterCalendario() {
+  var from = document.getElementById('cal-from').value;
+  var to   = document.getElementById('cal-to').value;
+  var ocupadas = window._calOcupadas || [];
+  var conflictos = window._calConflictos || [];
+
+  if (from || to) {
+    ocupadas = ocupadas.filter(function(o) {
+      var d = (o['Dia']||'').substring(0,10);
+      if (from && d < from) return false;
+      if (to   && d > to)   return false;
+      return true;
+    });
+    conflictos = conflictos.filter(function(c) {
+      var d = (c.dia||'').substring(0,10);
+      if (from && d < from) return false;
+      if (to   && d > to)   return false;
+      return true;
+    });
+  }
+  renderCalendario(ocupadas, conflictos);
+}
+
+function clearCalFilter() {
+  document.getElementById('cal-from').value = '';
+  document.getElementById('cal-to').value = '';
+  filterCalendario();
 }
 
 function fmtTime(val) {
