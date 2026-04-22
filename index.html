@@ -877,9 +877,16 @@ function checkShalaWarning(selectEl) {
   var pax = parseInt((window._retiro && window._retiro['Pax']) || 0);
   var row = selectEl.closest('.act-row');
   var warn = row.querySelector('.shala-warn');
-  if (!shala || !pax) { if(warn) warn.style.display='none'; return; }
+  var badge = row.querySelector('.shala-pending-badge');
+
+  if (!shala || !pax) {
+    if (warn) warn.style.display = 'none';
+    if (badge) badge.style.display = 'none';
+    return;
+  }
   var rule = SHALA_RULES[shala];
   if (rule && (pax < rule.min || pax > rule.max)) {
+    // Warning text
     if (!warn) {
       warn = document.createElement('div');
       warn.className = 'shala-warn';
@@ -888,8 +895,22 @@ function checkShalaWarning(selectEl) {
     }
     warn.textContent = 'Your group size is outside the recommended capacity for ' + shala + '. You can still select it, but it is subject to review by Amansala staff.';
     warn.style.display = 'block';
+    // Pending badge — read only for teacher
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.className = 'shala-pending-badge';
+      badge.style.cssText = 'grid-column:1/-1;display:flex;align-items:center;gap:8px;margin-top:2px;font-family:sans-serif;';
+      badge.innerHTML = '<span style="font-size:11px;background:#FAEEDA;color:#633806;border-radius:20px;padding:3px 10px;font-weight:bold;">⏳ Pending approval</span>' +
+        '<span style="font-size:11px;color:var(--text-sec);">Amansala staff will review this shala request.</span>';
+      row.appendChild(badge);
+    }
+    badge.style.display = 'flex';
+    // Store approval status on row (default pending)
+    if (!row.dataset.approvalStatus) row.dataset.approvalStatus = 'pending';
   } else {
     if (warn) warn.style.display = 'none';
+    if (badge) badge.style.display = 'none';
+    row.dataset.approvalStatus = '';
   }
 }
 
@@ -999,14 +1020,15 @@ function collectActividades() {
       var musicEl = row.querySelector('.f-music');
       var shalaEl = row.querySelector('.f-shala');
       actividades.push({
-        dia:        dia,
-        horaInicio: row.querySelector('.f-inicio').value,
-        horaFin:    row.querySelector('.f-fin').value,
-        actividad:  act,
-        shala:      shalaEl ? shalaEl.value : '',
-        opcional:   false,
-        precio:     '',
-        music:      musicEl ? musicEl.value : '',
+        dia:            dia,
+        horaInicio:     row.querySelector('.f-inicio').value,
+        horaFin:        row.querySelector('.f-fin').value,
+        actividad:      act,
+        shala:          shalaEl ? shalaEl.value : '',
+        opcional:       false,
+        precio:         '',
+        music:          musicEl ? musicEl.value : '',
+        approvalStatus: row.dataset.approvalStatus || '',
       });
     });
   });
@@ -1050,21 +1072,70 @@ function loadRetiros() {
       el.innerHTML = '<div style="color:var(--text-sec);font-family:sans-serif;font-size:13px;padding:16px 0;">No retreats registered yet.</div>';
       return;
     }
-    el.innerHTML = res.retiros.map(function(r) {
-      var pill = r['Estado'] === 'Completo'
-        ? '<span class="status-pill status-comp">Complete</span>'
-        : '<span class="status-pill status-pend">Pending</span>';
-      var docBtn = r['Doc URL']
-        ? '<a href="'+r['Doc URL']+'" target="_blank" style="font-size:12px;color:var(--teal);font-family:sans-serif;">View Doc ↗</a>'
-        : '';
-      return '<div class="retiro-item">' +
-        '<div><div style="font-weight:bold;">' + r['Nombre Grupo'] + '</div>' +
-        '<div class="retiro-meta">' + fmtDate(r['Fecha Inicio']) + ' → ' + fmtDate(r['Fecha Fin']) + ' · ' + r['Pax'] + ' guests · ' + r['Shalas Permitidas'] + '</div>' +
-        '<div class="retiro-meta" style="margin-top:3px;">Edit deadline: ' + fmtDateShort(r['Fecha Limite Edicion']) + ' &nbsp;·&nbsp; ' + r['Email Maestro'] + '</div></div>' +
-        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' + pill + docBtn +
-        '<a href="' + r['Link Formulario'] + '" target="_blank" style="font-size:11px;color:var(--text-sec);font-family:sans-serif;">View form ↗</a>' +
-        '</div></div>';
-    }).join('');
+    // Load all retiros, then check each for pending approvals
+    var retiros = res.retiros;
+    var pending = {};
+    var done = 0;
+    retiros.forEach(function(r) {
+      api('getActividades', { retiroId: r['ID'] }).then(function(ar) {
+        if (ar.ok) {
+          pending[r['ID']] = ar.actividades.filter(function(a){
+            return (a['Approval Status'] || a.approvalStatus) === 'pending';
+          });
+        }
+        done++;
+        if (done === retiros.length) renderRetirosList(retiros, pending);
+      });
+    });
+  });
+}
+
+function renderRetirosList(retiros, pending) {
+  var el = document.getElementById('retiros-list');
+  el.innerHTML = retiros.map(function(r) {
+    var pill = r['Estado'] === 'Completo'
+      ? '<span class="status-pill status-comp">Complete</span>'
+      : '<span class="status-pill status-pend">Pending</span>';
+    var docBtn = r['Doc URL']
+      ? '<a href="'+r['Doc URL']+'" target="_blank" style="font-size:12px;color:var(--teal);font-family:sans-serif;">View Doc ↗</a>'
+      : '';
+    var pendingActs = pending[r['ID']] || [];
+    var pendingHtml = '';
+    if (pendingActs.length > 0) {
+      pendingHtml = '<div style="margin-top:10px;padding:10px 12px;background:#FAEEDA;border-radius:var(--radius-sm);font-family:sans-serif;">' +
+        '<div style="font-size:11px;font-weight:bold;color:#633806;margin-bottom:6px;">⏳ Shala requests pending approval (' + pendingActs.length + ')</div>' +
+        pendingActs.map(function(a) {
+          var actId = a['ID Actividad'] || a.id || '';
+          var retiroId = a['Retiro ID'] || r['ID'];
+          var status = a['Approval Status'] || a.approvalStatus || 'pending';
+          var statusHtml = status === 'approved'
+            ? '<span style="font-size:11px;color:#085041;font-weight:bold;">✓ Approved</span>'
+            : status === 'declined'
+            ? '<span style="font-size:11px;color:#A32D2D;font-weight:bold;">✗ Declined</span>'
+            : '<div style="display:flex;gap:6px;">' +
+              '<button onclick="updateApproval(\''+retiroId+'\',\''+actId+'\',\'approved\')" style="font-size:11px;background:#1D9E75;color:white;border:none;border-radius:4px;padding:3px 10px;cursor:pointer;">Approve</button>' +
+              '<button onclick="updateApproval(\''+retiroId+'\',\''+actId+'\',\'declined\')" style="font-size:11px;background:#A32D2D;color:white;border:none;border-radius:4px;padding:3px 10px;cursor:pointer;">Decline</button>' +
+              '</div>';
+          return '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#633806;padding:4px 0;border-top:0.5px solid #FAC775;">' +
+            '<span><strong>' + (a['Shala']||a.shala) + '</strong> · ' + (a['Dia']||a.dia) + ' · ' + (a['Actividad']||a.actividad) + '</span>' +
+            statusHtml + '</div>';
+        }).join('') + '</div>';
+    }
+    return '<div class="retiro-item" style="flex-direction:column;align-items:flex-start;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;width:100%;">' +
+      '<div><div style="font-weight:bold;">' + r['Nombre Grupo'] + '</div>' +
+      '<div class="retiro-meta">' + fmtDate(r['Fecha Inicio']) + ' → ' + fmtDate(r['Fecha Fin']) + ' · ' + r['Pax'] + ' guests · ' + r['Shalas Permitidas'] + '</div>' +
+      '<div class="retiro-meta" style="margin-top:3px;">Edit deadline: ' + fmtDateShort(r['Fecha Limite Edicion']) + ' &nbsp;·&nbsp; ' + r['Email Maestro'] + '</div></div>' +
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">' + pill + docBtn +
+      '<a href="' + r['Link Formulario'] + '" target="_blank" style="font-size:11px;color:var(--text-sec);font-family:sans-serif;">View form ↗</a>' +
+      '</div></div>' + pendingHtml + '</div>';
+  }).join('');
+}
+
+function updateApproval(retiroId, actId, status) {
+  api_post('updateApproval', { retiroId: retiroId, actividadId: actId, status: status }).then(function(res) {
+    if (res.ok) loadRetiros();
+    else showAlert('alert-retiros', 'error', 'Error updating approval status.');
   });
 }
 
