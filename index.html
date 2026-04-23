@@ -1399,28 +1399,54 @@ function enviarSchedule() {
   var acts = collectActividades();
   if (acts.length === 0) { showAlert('alert-maestro', 'error', 'Add at least one activity before submitting.'); return; }
   var r = window._retiro;
-  var payload = JSON.stringify(acts);
-  console.log('Submitting', acts.length, 'activities, payload size:', payload.length, 'chars');
-  if (payload.length > 7000) {
-    // URL too long for JSONP — split or warn
-    console.warn('Payload too large for JSONP:', payload.length);
-    showAlert('alert-maestro', 'error', 'Schedule has too many activities for a single request. Please reduce activities or contact Amansala.');
-    return;
-  }
-  api_post('guardarSchedule', {
-    retiroId:     retiroId,
-    actividades:  JSON.stringify(acts),
-    emailMaestro: r['Email Maestro'],
-    nombreGrupo:  r['Nombre Grupo'],
-  }).then(function(res) {
-    if (!res.ok) { showAlert('alert-maestro', 'error', res.error || 'Error saving schedule.'); return; }
-    var msg = '✓ Schedule submitted successfully. You will receive the Google Doc in your email.';
-    if (res.conflictos && res.conflictos.length > 0) {
-      msg += ' Note: ' + res.conflictos.length + ' shala conflict(s) detected. Amansala staff will contact you.';
-    }
-    showAlert('alert-maestro', 'success', msg);
-    document.getElementById('submit-hint').textContent = 'Last saved: ' + new Date().toLocaleTimeString();
+
+  // Compress: only send essential fields
+  var actsMin = acts.map(function(a) {
+    return { d:a.dia, s:a.horaInicio, e:a.horaFin, n:a.actividad, h:a.shala||'', m:a.music||'', as:a.approvalStatus||'', o:a.opcional?1:0, p:a.precio||0 };
   });
+
+  console.log('Submitting', actsMin.length, 'activities');
+
+  // Send in batches of 8 to stay within URL limits
+  var BATCH = 8;
+  var batches = [];
+  for (var i = 0; i < actsMin.length; i += BATCH) {
+    batches.push(actsMin.slice(i, i + BATCH));
+  }
+
+  var submitBatch = function(idx, isFirst) {
+    if (idx >= batches.length) {
+      // All batches done — finalize
+      api_post('finalizarSchedule', {
+        retiroId: retiroId,
+        emailMaestro: r['Email Maestro'],
+        nombreGrupo: r['Nombre Grupo'],
+      }).then(function(res) {
+        if (!res.ok) { showAlert('alert-maestro', 'error', res.error || 'Error saving schedule.'); return; }
+        var msg = '✓ Schedule submitted successfully. You will receive the Google Doc in your email.';
+        if (res.conflictos && res.conflictos.length > 0) {
+          msg += ' Note: ' + res.conflictos.length + ' shala conflict(s) detected. Amansala staff will contact you.';
+        }
+        showAlert('alert-maestro', 'success', msg);
+        document.getElementById('submit-hint').textContent = 'Last saved: ' + new Date().toLocaleTimeString();
+      });
+      return;
+    }
+    api_post('guardarSchedule', {
+      retiroId:    retiroId,
+      actividades: JSON.stringify(batches[idx]),
+      batchIndex:  idx,
+      isFirst:     isFirst ? '1' : '0',
+      emailMaestro: r['Email Maestro'],
+      nombreGrupo:  r['Nombre Grupo'],
+    }).then(function(res) {
+      if (!res.ok) { showAlert('alert-maestro', 'error', res.error || 'Error saving.'); return; }
+      submitBatch(idx + 1, false);
+    });
+  };
+
+  showAlert('alert-maestro', 'warn', 'Saving schedule...');
+  submitBatch(0, true);
 }
 
 // ── STAFF: RETIROS ────────────────────────────────────────
