@@ -1408,7 +1408,7 @@ function enviarSchedule() {
   console.log('Submitting', actsMin.length, 'activities');
 
   // Send in batches of 8 to stay within URL limits
-  var BATCH = 8;
+  var BATCH = 5;
   var batches = [];
   for (var i = 0; i < actsMin.length; i += BATCH) {
     batches.push(actsMin.slice(i, i + BATCH));
@@ -1860,7 +1860,7 @@ function gasRequest(url) {
       delete window[cbName];
       var s = document.getElementById(cbName);
       if (s && s.parentNode) s.parentNode.removeChild(s);
-    }, 15000);
+    }, 30000);
 
     window[cbName] = function(data) {
       clearTimeout(timer);
