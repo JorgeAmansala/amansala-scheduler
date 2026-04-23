@@ -1845,6 +1845,8 @@ function api(action, params) {
 }
 
 function api_post(action, data) {
+  // Use fetch with no-cors for write operations — we don't need the response body
+  // Instead use JSONP which handles redirects properly
   var url = GAS_URL + '?action=' + action;
   Object.keys(data).forEach(function(k) {
     if (k !== 'action') url += '&' + k + '=' + encodeURIComponent(typeof data[k] === 'object' ? JSON.stringify(data[k]) : data[k]);
