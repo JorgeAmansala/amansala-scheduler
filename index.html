@@ -1440,12 +1440,16 @@ function enviarSchedule() {
       emailMaestro: r['Email Maestro'],
       nombreGrupo:  r['Nombre Grupo'],
     }).then(function(res) {
-      if (!res.ok) { showAlert('alert-maestro', 'error', res.error || 'Error saving.'); return; }
-      submitBatch(idx + 1, false);
+      if (!res.ok) { showAlert('alert-maestro', 'error', (res.error || 'Error saving batch ' + idx + '.')); return; }
+      var next = idx + 1;
+      if (next < batches.length) {
+        showAlert('alert-maestro', 'warn', 'Saving... (' + (next+1) + ' of ' + batches.length + ')');
+      }
+      submitBatch(next, false);
     });
   };
 
-  showAlert('alert-maestro', 'warn', 'Saving schedule...');
+  showAlert('alert-maestro', 'warn', 'Saving schedule... (batch 1 of ' + batches.length + ')');
   submitBatch(0, true);
 }
 
@@ -1867,9 +1871,12 @@ function gasRequest(url) {
     window[cbName] = function(data) {
       clearTimeout(timer);
       resolve(data);
-      delete window[cbName];
-      var s = document.getElementById(cbName);
-      if (s && s.parentNode) s.parentNode.removeChild(s);
+      // Delay cleanup to avoid race conditions
+      setTimeout(function() {
+        delete window[cbName];
+        var s = document.getElementById(cbName);
+        if (s && s.parentNode) s.parentNode.removeChild(s);
+      }, 1000);
     };
     var script = document.createElement('script');
     script.id = cbName;
