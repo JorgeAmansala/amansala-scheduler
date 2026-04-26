@@ -1400,29 +1400,43 @@ function enviarSchedule() {
   if (acts.length === 0) { showAlert('alert-maestro', 'error', 'Add at least one activity before submitting.'); return; }
   var r = window._retiro;
 
-  // Compress: only send essential fields
   var actsMin = acts.map(function(a) {
     return { d:a.dia, s:a.horaInicio, e:a.horaFin, n:a.actividad, h:a.shala||'', m:a.music||'', as:a.approvalStatus||'', o:a.opcional?1:0, p:a.precio||0 };
   });
 
   console.log('Submitting', actsMin.length, 'activities');
+  showAlert('alert-maestro', 'warn', 'Saving schedule... please wait.');
 
-  // Send in batches of 8 to stay within URL limits
   var BATCH = 5;
   var batches = [];
   for (var i = 0; i < actsMin.length; i += BATCH) {
     batches.push(actsMin.slice(i, i + BATCH));
   }
 
-  var submitBatch = function(idx, isFirst) {
-    if (idx >= batches.length) {
-      // All batches done — finalize
-      api_post('finalizarSchedule', {
+  // Use no-cors fetch for writes — fire and forget, then verify
+  var promises = batches.map(function(batch, idx) {
+    var url = GAS_URL + '?action=guardarSchedule' +
+      '&retiroId=' + encodeURIComponent(retiroId) +
+      '&actividades=' + encodeURIComponent(JSON.stringify(batch)) +
+      '&isFirst=' + (idx === 0 ? '1' : '0') +
+      '&batchIndex=' + idx +
+      '&emailMaestro=' + encodeURIComponent(r['Email Maestro']) +
+      '&nombreGrupo=' + encodeURIComponent(r['Nombre Grupo']);
+    return fetch(url, { mode: 'no-cors', redirect: 'follow' });
+  });
+
+  Promise.all(promises).then(function() {
+    // Wait 3s then finalize via JSONP (we can read the response)
+    setTimeout(function() {
+      api('finalizarSchedule', {
         retiroId: retiroId,
         emailMaestro: r['Email Maestro'],
         nombreGrupo: r['Nombre Grupo'],
       }).then(function(res) {
-        if (!res.ok) { showAlert('alert-maestro', 'error', res.error || 'Error saving schedule.'); return; }
+        if (!res || !res.ok) {
+          showAlert('alert-maestro', 'error', 'Error finalizing. Please try again.');
+          return;
+        }
         var msg = '✓ Schedule submitted successfully. You will receive the Google Doc in your email.';
         if (res.conflictos && res.conflictos.length > 0) {
           msg += ' Note: ' + res.conflictos.length + ' shala conflict(s) detected. Amansala staff will contact you.';
@@ -1430,27 +1444,26 @@ function enviarSchedule() {
         showAlert('alert-maestro', 'success', msg);
         document.getElementById('submit-hint').textContent = 'Last saved: ' + new Date().toLocaleTimeString();
       });
-      return;
-    }
-    api_post('guardarSchedule', {
-      retiroId:    retiroId,
-      actividades: JSON.stringify(batches[idx]),
-      batchIndex:  idx,
-      isFirst:     isFirst ? '1' : '0',
-      emailMaestro: r['Email Maestro'],
-      nombreGrupo:  r['Nombre Grupo'],
-    }).then(function(res) {
-      if (!res.ok) { showAlert('alert-maestro', 'error', (res.error || 'Error saving batch ' + idx + '.')); return; }
-      var next = idx + 1;
-      if (next < batches.length) {
-        showAlert('alert-maestro', 'warn', 'Saving... (' + (next+1) + ' of ' + batches.length + ')');
-      }
-      submitBatch(next, false);
-    });
-  };
-
-  showAlert('alert-maestro', 'warn', 'Saving schedule... (batch 1 of ' + batches.length + ')');
-  submitBatch(0, true);
+    }, 4000);
+  }).catch(function(err) {
+    console.error('Fetch error:', err);
+    // Even if fetch "fails" with no-cors, the request may have gone through
+    // Wait and try to finalize anyway
+    setTimeout(function() {
+      api('finalizarSchedule', {
+        retiroId: retiroId,
+        emailMaestro: r['Email Maestro'],
+        nombreGrupo: r['Nombre Grupo'],
+      }).then(function(res) {
+        if (res && res.ok) {
+          showAlert('alert-maestro', 'success', '✓ Schedule submitted successfully.');
+          document.getElementById('submit-hint').textContent = 'Last saved: ' + new Date().toLocaleTimeString();
+        } else {
+          showAlert('alert-maestro', 'error', 'Could not verify. Please check with Amansala staff.');
+        }
+      });
+    }, 4000);
+  });
 }
 
 // ── STAFF: RETIROS ────────────────────────────────────────
