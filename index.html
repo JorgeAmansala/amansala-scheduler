@@ -1440,39 +1440,39 @@ function enviarSchedule() {
     batches.push(actsMin.slice(i, i + BATCH));
   }
 
-  // Send batches sequentially via iframe
+  // Send batches sequentially via POST
   var sendNext = function(idx) {
     if (idx >= batches.length) {
-      // All batches sent — wait then finalize via JSONP
       showAlert('alert-maestro', 'warn', 'Finalizing...');
-      setTimeout(function() {
-        api('finalizarSchedule', {
-          retiroId: retiroId,
-          emailMaestro: r['Email Maestro'],
-          nombreGrupo: r['Nombre Grupo'],
-        }).then(function(res) {
-          if (res && res.ok) {
-            showAlert('alert-maestro', 'success', '✓ Schedule submitted successfully. You will receive the Google Doc in your email.');
-            document.getElementById('submit-hint').textContent = 'Last saved: ' + new Date().toLocaleTimeString();
-          } else {
-            showAlert('alert-maestro', 'error', 'Error finalizing. Please try again.');
-          }
-        });
-      }, 3000);
+      api_post('finalizarSchedule', {
+        retiroId: retiroId,
+        emailMaestro: r['Email Maestro'],
+        nombreGrupo: r['Nombre Grupo'],
+      }).then(function(res) {
+        if (res && res.ok) {
+          showAlert('alert-maestro', 'success', '✓ Schedule submitted successfully. You will receive the Google Doc in your email.');
+          document.getElementById('submit-hint').textContent = 'Last saved: ' + new Date().toLocaleTimeString();
+        } else {
+          showAlert('alert-maestro', 'error', 'Error finalizing. Please try again.');
+        }
+      });
       return;
     }
 
-    var url = GAS_URL + '?action=guardarSchedule' +
-      '&retiroId=' + encodeURIComponent(retiroId) +
-      '&actividades=' + encodeURIComponent(JSON.stringify(batches[idx])) +
-      '&isFirst=' + (idx === 0 ? '1' : '0') +
-      '&batchIndex=' + idx +
-      '&emailMaestro=' + encodeURIComponent(r['Email Maestro']) +
-      '&nombreGrupo=' + encodeURIComponent(r['Nombre Grupo']);
-
     showAlert('alert-maestro', 'warn', 'Saving... (' + (idx+1) + ' of ' + batches.length + ')');
-    iframeRequest(url).then(function() {
-      setTimeout(function() { sendNext(idx + 1); }, 1500);
+    api_post('guardarSchedule', {
+      retiroId:    retiroId,
+      actividades: JSON.stringify(batches[idx]),
+      isFirst:     idx === 0 ? '1' : '0',
+      batchIndex:  idx,
+      emailMaestro: r['Email Maestro'],
+      nombreGrupo:  r['Nombre Grupo'],
+    }).then(function(res) {
+      if (!res || !res.ok) {
+        showAlert('alert-maestro', 'error', 'Error on batch ' + (idx+1) + '. Please try again.');
+        return;
+      }
+      sendNext(idx + 1);
     });
   };
 
@@ -1875,13 +1875,14 @@ function api(action, params) {
 }
 
 function api_post(action, data) {
-  // Use fetch with no-cors for write operations — we don't need the response body
-  // Instead use JSONP which handles redirects properly
-  var url = GAS_URL + '?action=' + action;
-  Object.keys(data).forEach(function(k) {
-    if (k !== 'action') url += '&' + k + '=' + encodeURIComponent(typeof data[k] === 'object' ? JSON.stringify(data[k]) : data[k]);
-  });
-  return gasRequest(url);
+  data.action = action;
+  return fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(data),
+    redirect: 'follow'
+  }).then(function(r) { return r.json(); })
+    .catch(function(e) { console.error('POST error:', e); return { ok: false, error: e.toString() }; });
 }
 
 function gasRequest(url) {
