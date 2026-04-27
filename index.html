@@ -762,36 +762,25 @@ function initMaestro(id) {
     window._pmShala = r['PM Shala'] || r['PM_Shala'] || r['pmShala'] || '';
     window._openingShala = r['Opening Shala'] || r['Opening_Shala'] || r['openingShala'] || '';
 
-    // Load occupancy data for real-time shala availability checks
-    if (!window._calOcupadas) {
-      api('getConflictos', {}).then(function(cr) {
-        if (cr.ok) {
-          window._calOcupadas = cr.ocupadas || [];
-          window._calConflictos = cr.conflictos || [];
-          // Refresh all shala dropdowns now that occupancy data is available
-          document.querySelectorAll('.act-row').forEach(function(row) {
-            var sel = row.querySelector('.f-shala');
-            if (!sel) return;
-            var block = row.closest('.day-block');
-            if (!block) return;
-            var dia = block.dataset.dia;
-            refreshShalaOpts(row, dia);
-            if (sel.value) checkShalaWarning(sel);
-          });
-        }
-      });
-    } else {
-      // Data already loaded — refresh dropdowns immediately after render
-      setTimeout(function() {
+    // Load occupancy data for real-time shala availability checks (non-blocking)
+    api('getConflictos', {}).then(function(cr) {
+      if (cr && cr.ok) {
+        window._calOcupadas = cr.ocupadas || [];
+        window._calConflictos = cr.conflictos || [];
+        // Refresh all shala dropdowns now that occupancy data is available
         document.querySelectorAll('.act-row').forEach(function(row) {
           var sel = row.querySelector('.f-shala');
           if (!sel) return;
           var block = row.closest('.day-block');
           if (!block) return;
           refreshShalaOpts(row, block.dataset.dia);
+          if (sel.value) checkShalaWarning(sel);
         });
-      }, 100);
-    }
+      }
+    }).catch(function() {
+      // Silently fail — shala availability check is optional
+      window._calOcupadas = [];
+    });
 
     // Parse staff-set included addons
     var includedAddons = [];
@@ -1875,30 +1864,36 @@ function api_post(action, data) {
 function gasRequest(url) {
   return new Promise(function(resolve) {
     var cbName = '_cb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+
+    // Keep callback on window for longer to survive Google's redirect
+    window[cbName] = function(data) {
+      resolve(data);
+    };
+
+    // Shorter timeout — 20s
     var timer = setTimeout(function() {
       resolve({ ok: false, error: 'Timeout' });
-      delete window[cbName];
+      try { delete window[cbName]; } catch(e) {}
       var s = document.getElementById(cbName);
       if (s && s.parentNode) s.parentNode.removeChild(s);
-    }, 30000);
+    }, 20000);
 
-    window[cbName] = function(data) {
-      clearTimeout(timer);
-      resolve(data);
-      // Delay cleanup to avoid race conditions
-      setTimeout(function() {
-        delete window[cbName];
-        var s = document.getElementById(cbName);
-        if (s && s.parentNode) s.parentNode.removeChild(s);
-      }, 1000);
-    };
     var script = document.createElement('script');
     script.id = cbName;
+    // Use the redirect-following URL directly
     script.src = url + '&callback=' + cbName;
+    script.onload = function() {
+      // Cleanup after 2s to allow callback to fire after redirect
+      setTimeout(function() {
+        clearTimeout(timer);
+        try { delete window[cbName]; } catch(e) {}
+        if (script.parentNode) script.parentNode.removeChild(script);
+      }, 2000);
+    };
     script.onerror = function() {
       clearTimeout(timer);
-      resolve({ ok: false, error: 'Error de conexión' });
-      delete window[cbName];
+      resolve({ ok: false, error: 'Script error' });
+      try { delete window[cbName]; } catch(e) {}
       if (script.parentNode) script.parentNode.removeChild(script);
     };
     document.body.appendChild(script);
