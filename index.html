@@ -1395,30 +1395,15 @@ function guardarBorrador() {
   showAlert('alert-maestro', 'success', 'Draft saved locally. Remember to submit the final schedule when ready.');
 }
 
-function iframeRequest(url) {
+function fireAndForget(url) {
   return new Promise(function(resolve) {
-    var id = '_ifr_' + Date.now() + '_' + Math.floor(Math.random()*10000);
-    var ifr = document.createElement('iframe');
-    ifr.style.display = 'none';
-    ifr.id = id;
-    // We can't read the response from iframe due to CORS, just fire and resolve after delay
-    ifr.onload = function() {
-      setTimeout(function() {
-        if (ifr.parentNode) ifr.parentNode.removeChild(ifr);
-      }, 500);
-      resolve({ ok: true });
-    };
-    ifr.onerror = function() {
-      if (ifr.parentNode) ifr.parentNode.removeChild(ifr);
-      resolve({ ok: true }); // assume ok, Google redirects cause onerror
-    };
-    ifr.src = url;
-    document.body.appendChild(ifr);
-    // Safety timeout
-    setTimeout(function() {
-      if (ifr.parentNode) ifr.parentNode.removeChild(ifr);
-      resolve({ ok: true });
-    }, 20000);
+    var img = new Image();
+    var done = false;
+    var finish = function() { if (!done) { done = true; resolve({ ok: true }); } };
+    img.onload = finish;
+    img.onerror = finish;
+    setTimeout(finish, 25000);
+    img.src = url + '&_t=' + Date.now();
   });
 }
 
@@ -1442,23 +1427,25 @@ function enviarSchedule() {
 
   var sendNext = function(idx) {
     if (idx >= batches.length) {
-      showAlert('alert-maestro', 'warn', 'Finalizing...');
-      api('finalizarSchedule', {
-        retiroId: retiroId,
-        emailMaestro: r['Email Maestro'],
-        nombreGrupo: r['Nombre Grupo'],
-      }).then(function(res) {
-        if (res && res.ok) {
-          showAlert('alert-maestro', 'success', '✓ Schedule submitted successfully. You will receive the Google Doc in your email.');
-          document.getElementById('submit-hint').textContent = 'Last saved: ' + new Date().toLocaleTimeString();
-        } else {
-          showAlert('alert-maestro', 'error', 'Error finalizing. Please try again.');
-        }
-      });
+      showAlert('alert-maestro', 'warn', 'Verifying...');
+      setTimeout(function() {
+        api('finalizarSchedule', {
+          retiroId: retiroId,
+          emailMaestro: r['Email Maestro'],
+          nombreGrupo: r['Nombre Grupo'],
+        }).then(function(res) {
+          if (res && res.ok) {
+            showAlert('alert-maestro', 'success', '✓ Schedule submitted successfully. You will receive the Google Doc in your email.');
+            document.getElementById('submit-hint').textContent = 'Last saved: ' + new Date().toLocaleTimeString();
+          } else {
+            showAlert('alert-maestro', 'error', 'Error finalizing. Please try again.');
+          }
+        });
+      }, 5000);
       return;
     }
 
-    var batchUrl = GAS_URL + '?action=guardarSchedule' +
+    var url = GAS_URL + '?action=guardarSchedule' +
       '&retiroId=' + encodeURIComponent(retiroId) +
       '&actividades=' + encodeURIComponent(JSON.stringify(batches[idx])) +
       '&isFirst=' + (idx === 0 ? '1' : '0') +
@@ -1466,14 +1453,8 @@ function enviarSchedule() {
       '&emailMaestro=' + encodeURIComponent(r['Email Maestro']) +
       '&nombreGrupo=' + encodeURIComponent(r['Nombre Grupo']);
 
-    console.log('Batch', idx+1, 'URL length:', batchUrl.length);
     showAlert('alert-maestro', 'warn', 'Saving... (' + (idx+1) + ' of ' + batches.length + ')');
-
-    gasRequest(batchUrl).then(function(res) {
-      if (!res || !res.ok) {
-        showAlert('alert-maestro', 'error', 'Error on batch ' + (idx+1) + ': ' + (res&&res.error||'timeout'));
-        return;
-      }
+    fireAndForget(url).then(function() {
       sendNext(idx + 1);
     });
   };
