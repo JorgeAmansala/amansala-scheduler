@@ -1411,47 +1411,36 @@ function enviarSchedule() {
   console.log('Submitting', actsMin.length, 'activities');
   showAlert('alert-maestro', 'warn', 'Saving schedule... please wait.');
 
-  var BATCH = 3;
-  var batches = [];
-  for (var i = 0; i < actsMin.length; i += BATCH) {
-    batches.push(actsMin.slice(i, i + BATCH));
-  }
+  // Send all at once via fireAndForget (no response needed)
+  // Then verify via JSONP after delay
+  var url = GAS_URL + '?action=guardarSchedule' +
+    '&retiroId=' + encodeURIComponent(retiroId) +
+    '&actividades=' + encodeURIComponent(JSON.stringify(actsMin)) +
+    '&isFirst=1' +
+    '&emailMaestro=' + encodeURIComponent(r['Email Maestro']) +
+    '&nombreGrupo=' + encodeURIComponent(r['Nombre Grupo']);
 
-  var sendNext = function(idx) {
-    if (idx >= batches.length) {
-      showAlert('alert-maestro', 'warn', 'Verifying...');
-      setTimeout(function() {
-        api('finalizarSchedule', {
-          retiroId: retiroId,
-          emailMaestro: r['Email Maestro'],
-          nombreGrupo: r['Nombre Grupo'],
-        }).then(function(res) {
-          if (res && res.ok) {
-            showAlert('alert-maestro', 'success', '✓ Schedule submitted successfully. You will receive the Google Doc in your email.');
-            document.getElementById('submit-hint').textContent = 'Last saved: ' + new Date().toLocaleTimeString();
-          } else {
-            showAlert('alert-maestro', 'error', 'Error finalizing. Please try again.');
-          }
-        });
-      }, 5000);
-      return;
-    }
+  console.log('URL length:', url.length);
 
-    var url = GAS_URL + '?action=guardarSchedule' +
-      '&retiroId=' + encodeURIComponent(retiroId) +
-      '&actividades=' + encodeURIComponent(JSON.stringify(batches[idx])) +
-      '&isFirst=' + (idx === 0 ? '1' : '0') +
-      '&batchIndex=' + idx +
-      '&emailMaestro=' + encodeURIComponent(r['Email Maestro']) +
-      '&nombreGrupo=' + encodeURIComponent(r['Nombre Grupo']);
+  // Fire the request - don't wait for response
+  fireAndForget(url);
 
-    showAlert('alert-maestro', 'warn', 'Saving... (' + (idx+1) + ' of ' + batches.length + ')');
-    fireAndForget(url).then(function() {
-      sendNext(idx + 1);
+  // Wait 8 seconds then finalize via JSONP
+  setTimeout(function() {
+    showAlert('alert-maestro', 'warn', 'Verifying...');
+    api('finalizarSchedule', {
+      retiroId: retiroId,
+      emailMaestro: r['Email Maestro'],
+      nombreGrupo: r['Nombre Grupo'],
+    }).then(function(res) {
+      if (res && res.ok) {
+        showAlert('alert-maestro', 'success', '✓ Schedule submitted successfully. You will receive the Google Doc in your email.');
+        document.getElementById('submit-hint').textContent = 'Last saved: ' + new Date().toLocaleTimeString();
+      } else {
+        showAlert('alert-maestro', 'error', 'Error finalizing. Please try again.');
+      }
     });
-  };
-
-  sendNext(0);
+  }, 8000);
 }
 
 // ── STAFF: RETIROS ────────────────────────────────────────
