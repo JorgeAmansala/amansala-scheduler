@@ -1864,15 +1864,15 @@ function api_post(action, data) {
 function gasRequest(url) {
   return new Promise(function(resolve) {
     var cbName = '_cb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+    var resolved = false;
 
-    // Keep callback on window for longer to survive Google's redirect
     window[cbName] = function(data) {
-      resolve(data);
+      if (!resolved) { resolved = true; resolve(data); }
+      setTimeout(function() { try { delete window[cbName]; } catch(e) {} }, 500);
     };
 
-    // Shorter timeout — 20s
     var timer = setTimeout(function() {
-      resolve({ ok: false, error: 'Timeout' });
+      if (!resolved) { resolved = true; resolve({ ok: false, error: 'Timeout' }); }
       try { delete window[cbName]; } catch(e) {}
       var s = document.getElementById(cbName);
       if (s && s.parentNode) s.parentNode.removeChild(s);
@@ -1880,23 +1880,13 @@ function gasRequest(url) {
 
     var script = document.createElement('script');
     script.id = cbName;
-    // Use the redirect-following URL directly
     script.src = url + '&callback=' + cbName;
-    script.onload = function() {
-      // Cleanup after 2s to allow callback to fire after redirect
-      setTimeout(function() {
-        clearTimeout(timer);
-        try { delete window[cbName]; } catch(e) {}
-        if (script.parentNode) script.parentNode.removeChild(script);
-      }, 2000);
-    };
     script.onerror = function() {
       clearTimeout(timer);
-      resolve({ ok: false, error: 'Script error' });
+      if (!resolved) { resolved = true; resolve({ ok: false, error: 'Script load error' }); }
       try { delete window[cbName]; } catch(e) {}
-      if (script.parentNode) script.parentNode.removeChild(script);
     };
-    document.body.appendChild(script);
+    document.head.appendChild(script);
   });
 }
 
