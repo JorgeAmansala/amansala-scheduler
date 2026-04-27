@@ -1386,16 +1386,35 @@ function guardarBorrador() {
 
 function fireAndForget(url) {
   return new Promise(function(resolve) {
-    var done = false;
-    var finish = function() { if (!done) { done = true; resolve({ ok: true }); } };
-    // Force advance after 3s — don't wait for image to load
-    setTimeout(finish, 3000);
-    try {
-      var img = new Image();
-      img.onload = finish;
-      img.onerror = finish;
-      img.src = url + '&_t=' + Date.now();
-    } catch(e) { finish(); }
+    // Use script tag — follows Google's redirects unlike Image or fetch
+    var script = document.createElement('script');
+    var cbName = '_ff_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+    window[cbName] = function() {
+      try { delete window[cbName]; } catch(e) {}
+      if (script.parentNode) script.parentNode.removeChild(script);
+      resolve({ ok: true });
+    };
+    script.src = url + '&callback=' + cbName;
+    script.onload = function() {
+      // Script loaded — callback will fire shortly
+      setTimeout(function() {
+        try { delete window[cbName]; } catch(e) {}
+        if (script.parentNode) script.parentNode.removeChild(script);
+        resolve({ ok: true });
+      }, 2000);
+    };
+    script.onerror = function() {
+      try { delete window[cbName]; } catch(e) {}
+      if (script.parentNode) script.parentNode.removeChild(script);
+      resolve({ ok: false });
+    };
+    // Timeout fallback
+    setTimeout(function() {
+      try { delete window[cbName]; } catch(e) {}
+      if (script.parentNode) script.parentNode.removeChild(script);
+      resolve({ ok: true }); // assume it went through
+    }, 15000);
+    document.head.appendChild(script);
   });
 }
 
