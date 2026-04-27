@@ -1397,13 +1397,16 @@ function guardarBorrador() {
 
 function fireAndForget(url) {
   return new Promise(function(resolve) {
-    var img = new Image();
     var done = false;
     var finish = function() { if (!done) { done = true; resolve({ ok: true }); } };
-    img.onload = finish;
-    img.onerror = finish;
-    setTimeout(finish, 25000);
-    img.src = url + '&_t=' + Date.now();
+    // Force advance after 3s — don't wait for image to load
+    setTimeout(finish, 3000);
+    try {
+      var img = new Image();
+      img.onload = finish;
+      img.onerror = finish;
+      img.src = url + '&_t=' + Date.now();
+    } catch(e) { finish(); }
   });
 }
 
