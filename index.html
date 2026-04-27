@@ -1434,17 +1434,16 @@ function enviarSchedule() {
   console.log('Submitting', actsMin.length, 'activities');
   showAlert('alert-maestro', 'warn', 'Saving schedule... please wait.');
 
-  var BATCH = 5;
+  var BATCH = 3;
   var batches = [];
   for (var i = 0; i < actsMin.length; i += BATCH) {
     batches.push(actsMin.slice(i, i + BATCH));
   }
 
-  // Send batches sequentially via POST
   var sendNext = function(idx) {
     if (idx >= batches.length) {
       showAlert('alert-maestro', 'warn', 'Finalizing...');
-      api_post('finalizarSchedule', {
+      api('finalizarSchedule', {
         retiroId: retiroId,
         emailMaestro: r['Email Maestro'],
         nombreGrupo: r['Nombre Grupo'],
@@ -1459,17 +1458,20 @@ function enviarSchedule() {
       return;
     }
 
+    var batchUrl = GAS_URL + '?action=guardarSchedule' +
+      '&retiroId=' + encodeURIComponent(retiroId) +
+      '&actividades=' + encodeURIComponent(JSON.stringify(batches[idx])) +
+      '&isFirst=' + (idx === 0 ? '1' : '0') +
+      '&batchIndex=' + idx +
+      '&emailMaestro=' + encodeURIComponent(r['Email Maestro']) +
+      '&nombreGrupo=' + encodeURIComponent(r['Nombre Grupo']);
+
+    console.log('Batch', idx+1, 'URL length:', batchUrl.length);
     showAlert('alert-maestro', 'warn', 'Saving... (' + (idx+1) + ' of ' + batches.length + ')');
-    api_post('guardarSchedule', {
-      retiroId:    retiroId,
-      actividades: JSON.stringify(batches[idx]),
-      isFirst:     idx === 0 ? '1' : '0',
-      batchIndex:  idx,
-      emailMaestro: r['Email Maestro'],
-      nombreGrupo:  r['Nombre Grupo'],
-    }).then(function(res) {
+
+    gasRequest(batchUrl).then(function(res) {
       if (!res || !res.ok) {
-        showAlert('alert-maestro', 'error', 'Error on batch ' + (idx+1) + '. Please try again.');
+        showAlert('alert-maestro', 'error', 'Error on batch ' + (idx+1) + ': ' + (res&&res.error||'timeout'));
         return;
       }
       sendNext(idx + 1);
@@ -1875,14 +1877,15 @@ function api(action, params) {
 }
 
 function api_post(action, data) {
-  data.action = action;
-  return fetch(GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(data),
-    redirect: 'follow'
-  }).then(function(r) { return r.json(); })
-    .catch(function(e) { console.error('POST error:', e); return { ok: false, error: e.toString() }; });
+  // Apps Script blocks POST from external origins — use JSONP (GET) for all operations
+  var url = GAS_URL + '?action=' + action;
+  Object.keys(data).forEach(function(k) {
+    if (k !== 'action') {
+      var v = typeof data[k] === 'object' ? JSON.stringify(data[k]) : String(data[k]);
+      url += '&' + k + '=' + encodeURIComponent(v);
+    }
+  });
+  return gasRequest(url);
 }
 
 function gasRequest(url) {
