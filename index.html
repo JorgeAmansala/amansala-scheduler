@@ -1408,24 +1408,32 @@ function enviarSchedule() {
     return { d:a.dia, s:a.horaInicio, e:a.horaFin, n:a.actividad, h:a.shala||'', m:a.music||'', as:a.approvalStatus||'', o:a.opcional?1:0, p:a.precio||0 };
   });
 
-  console.log('Submitting', actsMin.length, 'activities');
-  showAlert('alert-maestro', 'warn', 'Saving schedule... please wait.');
+  var BATCH = 3;
+  var batches = [];
+  for (var i = 0; i < actsMin.length; i += BATCH) {
+    batches.push(actsMin.slice(i, i + BATCH));
+  }
 
-  // Send all at once via fireAndForget (no response needed)
-  // Then verify via JSONP after delay
-  var url = GAS_URL + '?action=guardarSchedule' +
-    '&retiroId=' + encodeURIComponent(retiroId) +
-    '&actividades=' + encodeURIComponent(JSON.stringify(actsMin)) +
-    '&isFirst=1' +
-    '&emailMaestro=' + encodeURIComponent(r['Email Maestro']) +
-    '&nombreGrupo=' + encodeURIComponent(r['Nombre Grupo']);
+  console.log('Submitting', actsMin.length, 'activities in', batches.length, 'batches');
+  showAlert('alert-maestro', 'warn', 'Saving schedule... (' + batches.length + ' steps, ~' + (batches.length * 4 + 8) + 's)');
 
-  console.log('URL length:', url.length);
+  // Fire all batches with staggered delays — no waiting for response
+  batches.forEach(function(batch, idx) {
+    setTimeout(function() {
+      var url = GAS_URL + '?action=guardarSchedule' +
+        '&retiroId=' + encodeURIComponent(retiroId) +
+        '&actividades=' + encodeURIComponent(JSON.stringify(batch)) +
+        '&isFirst=' + (idx === 0 ? '1' : '0') +
+        '&batchIndex=' + idx +
+        '&emailMaestro=' + encodeURIComponent(r['Email Maestro']) +
+        '&nombreGrupo=' + encodeURIComponent(r['Nombre Grupo']);
+      console.log('Firing batch', idx+1, 'URL length:', url.length);
+      fireAndForget(url);
+    }, idx * 4000); // 4s between each batch
+  });
 
-  // Fire the request - don't wait for response
-  fireAndForget(url);
-
-  // Wait 8 seconds then finalize via JSONP
+  // After all batches have been fired + time to process, finalize
+  var totalWait = (batches.length * 4000) + 8000;
   setTimeout(function() {
     showAlert('alert-maestro', 'warn', 'Verifying...');
     api('finalizarSchedule', {
@@ -1440,7 +1448,7 @@ function enviarSchedule() {
         showAlert('alert-maestro', 'error', 'Error finalizing. Please try again.');
       }
     });
-  }, 8000);
+  }, totalWait);
 }
 
 // ── STAFF: RETIROS ────────────────────────────────────────
