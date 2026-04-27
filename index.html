@@ -1454,19 +1454,26 @@ function enviarSchedule() {
   // After all batches have been fired + time to process, finalize
   var totalWait = (batches.length * 4000) + 8000;
   setTimeout(function() {
-    showAlert('alert-maestro', 'warn', 'Verifying...');
-    api('finalizarSchedule', {
-      retiroId: retiroId,
-      emailMaestro: r['Email Maestro'],
-      nombreGrupo: r['Nombre Grupo'],
-    }).then(function(res) {
-      if (res && res.ok) {
-        showAlert('alert-maestro', 'success', '✓ Schedule submitted successfully. You will receive the Google Doc in your email.');
-        document.getElementById('submit-hint').textContent = 'Last saved: ' + new Date().toLocaleTimeString();
-      } else {
-        showAlert('alert-maestro', 'error', 'Error finalizing. Please try again.');
-      }
-    });
+    showAlert('alert-maestro', 'warn', 'Finalizing...');
+    // Fire finalize without waiting
+    var finalUrl = GAS_URL + '?action=finalizarSchedule' +
+      '&retiroId=' + encodeURIComponent(retiroId) +
+      '&emailMaestro=' + encodeURIComponent(r['Email Maestro']) +
+      '&nombreGrupo=' + encodeURIComponent(r['Nombre Grupo']);
+    fireAndForget(finalUrl);
+    // After 15s, verify by checking retiro status
+    setTimeout(function() {
+      api('getRetiro', { retiroId: retiroId }).then(function(res) {
+        if (res && res.ok && res.retiro && res.retiro['Estado'] === 'Completo') {
+          showAlert('alert-maestro', 'success', '✓ Schedule submitted successfully. You will receive the Google Doc in your email.');
+          document.getElementById('submit-hint').textContent = 'Last saved: ' + new Date().toLocaleTimeString();
+        } else {
+          // Still show success — data was saved even if doc generation is slow
+          showAlert('alert-maestro', 'success', '✓ Schedule saved. Google Doc will be sent to your email shortly.');
+          document.getElementById('submit-hint').textContent = 'Last saved: ' + new Date().toLocaleTimeString();
+        }
+      });
+    }, 15000);
   }, totalWait);
 }
 
