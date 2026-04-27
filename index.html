@@ -1456,7 +1456,7 @@ function enviarSchedule() {
   setTimeout(function() {
     showAlert('alert-maestro', 'warn', 'Finalizing...');
     // Fire finalize without waiting
-    var finalUrl = GAS_URL + '?action=finalizarSchedule' +
+    var finalUrl = GAS_URL + '?action=saveComplete' +
       '&retiroId=' + encodeURIComponent(retiroId) +
       '&emailMaestro=' + encodeURIComponent(r['Email Maestro']) +
       '&nombreGrupo=' + encodeURIComponent(r['Nombre Grupo']);
